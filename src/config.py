@@ -7,12 +7,14 @@ import os
 from pathlib import Path
 from typing import Optional
 import logging
+from dotenv import load_dotenv
 
 class Config:
     """Central configuration management for the bank communication system."""
     
     def __init__(self):
         """Initialize configuration with secure defaults."""
+        load_dotenv()  # Load .env file
         self.setup_logging()
         self.base_dir = self._get_base_directory()
         self._setup_directories()

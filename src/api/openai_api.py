@@ -9,7 +9,10 @@ import re
 from typing import Optional
 from pathlib import Path
 import openai
-from ..config import get_api_key, get_directory
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent))
+from config import get_api_key, get_directory
 
 class OpenAIAPI:
     """
