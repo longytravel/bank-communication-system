@@ -1,1 +1,46 @@
- 
+ # Core Python packages for Bank Communication System
+
+# AI/ML APIs
+anthropic>=0.25.0
+openai>=1.30.0
+
+# Web Framework
+streamlit>=1.28.0
+
+# Data Processing
+pandas>=2.0.0
+numpy>=1.24.0
+
+# File Processing
+openpyxl>=3.1.0          # Excel files
+python-docx>=0.8.11      # Word documents
+PyPDF2>=3.0.0            # PDF files
+Pillow>=10.0.0           # Image processing
+pytesseract>=0.3.10      # OCR for images
+
+# Data Visualization
+plotly>=5.15.0
+
+# Environment Management
+python-dotenv>=1.0.0
+
+# Utilities
+pathlib2>=2.3.7
+typing-extensions>=4.5.0
+
+# Date/Time
+python-dateutil>=2.8.2
+
+# JSON/Data
+jsonschema>=4.17.0
+
+# Logging
+colorlog>=6.7.0
+
+# Testing (optional)
+pytest>=7.4.0
+pytest-mock>=3.11.0
+
+# Development (optional)
+black>=23.0.0            # Code formatting
+flake8>=6.0.0            # Linting
