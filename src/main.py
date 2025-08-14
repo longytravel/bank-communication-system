@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 import sys
 import time
+from communication_processing.batch_ui import render_batch_communication_processing
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
@@ -816,9 +817,9 @@ def main():
     # Sidebar navigation
     with st.sidebar:
         st.markdown("## Navigation")
-        page = st.selectbox(
-            "Select Module",
-            ["Executive Dashboard", "Customer Analysis", "Letter Management", "Cost Management", "Communication Processing", "System Monitor"],
+    page = st.selectbox(
+        "Select Module",
+        ["Executive Dashboard", "Customer Analysis", "Letter Management", "Batch Communication Processing", "Cost Management", "System Monitor"],
             index=0
         )
     
@@ -847,9 +848,8 @@ def main():
             customer_categories = st.session_state.get("analysis_results", {}).get("customer_categories", [])
             render_cost_analyzer_ui(customer_categories)
     
-    elif page == "Communication Processing":
-        st.markdown("## 💬 Communication Processing Module")
-        st.info("Individual customer communication processing coming next...")
+    elif page == "Batch Communication Processing":
+        render_batch_communication_processing()
     
     elif page == "System Monitor":
         st.markdown("## 📊 System Performance Monitor")
