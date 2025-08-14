@@ -1,6 +1,6 @@
 """
 Resonance Bank - Complete Banking Interface
-Modern banking interface with Customer Analysis and Cost Management integration.
+Modern banking interface with Customer Analysis, Cost Management, and Letter Processing.
 """
 
 import streamlit as st
@@ -27,8 +27,11 @@ from communication_processing import (
     integrate_cost_analysis_with_api_manager
 )
 
+# Import file handlers module
+from file_handlers.letter_scanner import render_enhanced_letter_management
+
 # ============================================================================
-# MODERN BANKING UI STYLING
+# MODERN BANKING UI STYLING - (keeping the same as before)
 # ============================================================================
 
 def apply_modern_banking_styling():
@@ -317,7 +320,7 @@ def render_modern_header():
     """, unsafe_allow_html=True)
 
 # ============================================================================
-# DATA LOADING & PROCESSING
+# DATA LOADING & PROCESSING - (keeping the same as before)
 # ============================================================================
 
 @st.cache_data
@@ -329,7 +332,7 @@ def load_customer_data():
     return None
 
 # ============================================================================
-# CUSTOMER ANALYSIS MODULE
+# CUSTOMER ANALYSIS MODULE - (keeping the same as before but condensed)
 # ============================================================================
 
 def render_customer_analysis_page():
@@ -367,7 +370,7 @@ def render_customer_analysis_page():
     with col1:
         if st.button("📋 Use Sample Data", use_container_width=True):
             st.session_state.customer_data = load_sample_data()
-            st.session_state.analysis_results = None  # Clear previous results
+            st.session_state.analysis_results = None
     
     with col2:
         if st.button("💡 View Data Template", use_container_width=True):
@@ -381,7 +384,7 @@ def render_customer_analysis_page():
     # Handle uploaded file
     if uploaded_file is not None:
         st.session_state.customer_data = process_uploaded_file(uploaded_file)
-        st.session_state.analysis_results = None  # Clear previous results
+        st.session_state.analysis_results = None
     
     # Show analysis section if data is loaded
     if st.session_state.customer_data is not None:
@@ -409,15 +412,13 @@ def load_sample_data():
 def process_uploaded_file(uploaded_file):
     """Process the uploaded customer data file."""
     try:
-        # Read the file based on its type
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file)
-        else:  # Excel file
+        else:
             df = pd.read_excel(uploaded_file)
         
         st.success(f"✅ File uploaded successfully: {len(df)} customers, {len(df.columns)} fields")
         
-        # Show data preview
         with st.expander("📋 Data Preview"):
             st.dataframe(df.head(), use_container_width=True)
             
@@ -561,7 +562,7 @@ def run_customer_analysis(customer_data, batch_size):
             status_text.empty()
             
             st.success(f"🎉 Successfully analyzed {len(analysis_results.get('customer_categories', []))} customers!")
-            st.rerun()  # Refresh to show results
+            st.rerun()
         else:
             progress_bar.empty()
             status_text.empty()
@@ -680,7 +681,6 @@ def render_analysis_results(analysis_results):
     col1, col2 = st.columns(2)
     
     with col1:
-        # CSV download
         csv_data = pd.DataFrame(customer_summary).to_csv(index=False)
         st.download_button(
             label="📊 Download CSV",
@@ -691,7 +691,6 @@ def render_analysis_results(analysis_results):
         )
     
     with col2:
-        # JSON download
         json_data = json.dumps(analysis_results, indent=2, default=str)
         st.download_button(
             label="🔄 Download JSON",
@@ -819,7 +818,7 @@ def main():
         st.markdown("## Navigation")
         page = st.selectbox(
             "Select Module",
-            ["Executive Dashboard", "Customer Analysis", "Cost Management", "Communication Processing", "System Monitor"],
+            ["Executive Dashboard", "Customer Analysis", "Letter Management", "Cost Management", "Communication Processing", "System Monitor"],
             index=0
         )
     
@@ -830,6 +829,10 @@ def main():
     
     elif page == "Customer Analysis":
         render_customer_analysis_page()
+    
+    elif page == "Letter Management":
+        from file_handlers.letter_scanner import render_enhanced_letter_management
+        render_enhanced_letter_management()
     
     elif page == "Cost Management":
         st.markdown("## 💰 Cost Management")
@@ -845,11 +848,11 @@ def main():
             render_cost_analyzer_ui(customer_categories)
     
     elif page == "Communication Processing":
-        st.markdown("## Communication Processing Module")
-        st.info("Communication processing functionality coming next...")
+        st.markdown("## 💬 Communication Processing Module")
+        st.info("Individual customer communication processing coming next...")
     
     elif page == "System Monitor":
-        st.markdown("## System Performance Monitor")
+        st.markdown("## 📊 System Performance Monitor")
         st.info("System monitoring functionality coming next...")
 
 if __name__ == "__main__":
