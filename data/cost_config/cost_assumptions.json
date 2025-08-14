@@ -1,0 +1,96 @@
+{
+  "last_updated": "2025-08-14T06:29:07.595268",
+  "current_scenario": "realistic",
+  "scenarios": {
+    "realistic": {
+      "name": "Realistic",
+      "description": "Realistic costs based on current UK market rates",
+      "costs": {
+        "letter_postage": 0.85,
+        "letter_printing": 0.08,
+        "letter_envelope": 0.03,
+        "letter_staff_time": 0.5,
+        "email_cost": 0.002,
+        "sms_cost": 0.05,
+        "in_app_notification": 0.001,
+        "voice_note_generation": 0.02,
+        "letter_carbon_g": 25.0,
+        "email_carbon_g": 0.3,
+        "sms_carbon_g": 0.1,
+        "in_app_carbon_g": 0.05,
+        "letter_staff_minutes": 2.0,
+        "email_staff_minutes": 0.1,
+        "sms_staff_minutes": 0.05,
+        "staff_hourly_rate": 15.0
+      },
+      "discounts": {
+        "small_volume_threshold": 100,
+        "medium_volume_threshold": 1000,
+        "large_volume_threshold": 5000,
+        "small_discount": 0.0,
+        "medium_discount": 0.05,
+        "large_discount": 0.15
+      }
+    },
+    "conservative": {
+      "name": "Conservative",
+      "description": "Higher costs for worst-case planning",
+      "costs": {
+        "letter_postage": 1.2,
+        "letter_printing": 0.15,
+        "letter_envelope": 0.05,
+        "letter_staff_time": 1.25,
+        "email_cost": 0.005,
+        "sms_cost": 0.08,
+        "in_app_notification": 0.003,
+        "voice_note_generation": 0.035,
+        "letter_carbon_g": 25.0,
+        "email_carbon_g": 0.3,
+        "sms_carbon_g": 0.1,
+        "in_app_carbon_g": 0.05,
+        "letter_staff_minutes": 2.0,
+        "email_staff_minutes": 0.1,
+        "sms_staff_minutes": 0.05,
+        "staff_hourly_rate": 15.0
+      },
+      "discounts": {
+        "small_volume_threshold": 100,
+        "medium_volume_threshold": 1000,
+        "large_volume_threshold": 5000,
+        "small_discount": 0.0,
+        "medium_discount": 0.05,
+        "large_discount": 0.15
+      }
+    },
+    "optimistic": {
+      "name": "Optimistic",
+      "description": "Lower costs with automation and bulk discounts",
+      "costs": {
+        "letter_postage": 0.65,
+        "letter_printing": 0.04,
+        "letter_envelope": 0.02,
+        "letter_staff_time": 0.25,
+        "email_cost": 0.001,
+        "sms_cost": 0.03,
+        "in_app_notification": 0.0005,
+        "voice_note_generation": 0.015,
+        "letter_carbon_g": 25.0,
+        "email_carbon_g": 0.3,
+        "sms_carbon_g": 0.1,
+        "in_app_carbon_g": 0.05,
+        "letter_staff_minutes": 2.0,
+        "email_staff_minutes": 0.1,
+        "sms_staff_minutes": 0.05,
+        "staff_hourly_rate": 15.0
+      },
+      "discounts": {
+        "small_volume_threshold": 100,
+        "medium_volume_threshold": 1000,
+        "large_volume_threshold": 5000,
+        "small_discount": 0.0,
+        "medium_discount": 0.05,
+        "large_discount": 0.15
+      }
+    }
+  }
+}

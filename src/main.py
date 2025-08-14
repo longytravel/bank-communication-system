@@ -1,6 +1,6 @@
 """
 Resonance Bank - Complete Banking Interface
-Modern banking interface with Customer Analysis integration.
+Modern banking interface with Customer Analysis and Cost Management integration.
 """
 
 import streamlit as st
@@ -19,6 +19,13 @@ sys.path.insert(0, str(Path(__file__).parent))
 from config import config, is_configured
 from api.api_manager import APIManager
 from business_rules.engine import BusinessRulesEngine
+
+# Import cost management modules
+from communication_processing import (
+    render_cost_configuration_ui, 
+    render_cost_analyzer_ui,
+    integrate_cost_analysis_with_api_manager
+)
 
 # ============================================================================
 # MODERN BANKING UI STYLING
@@ -812,7 +819,7 @@ def main():
         st.markdown("## Navigation")
         page = st.selectbox(
             "Select Module",
-            ["Executive Dashboard", "Customer Analysis", "Communication Processing", "System Monitor"],
+            ["Executive Dashboard", "Customer Analysis", "Cost Management", "Communication Processing", "System Monitor"],
             index=0
         )
     
@@ -823,6 +830,19 @@ def main():
     
     elif page == "Customer Analysis":
         render_customer_analysis_page()
+    
+    elif page == "Cost Management":
+        st.markdown("## 💰 Cost Management")
+        
+        tab1, tab2 = st.tabs(["Configuration", "Analysis"])
+        
+        with tab1:
+            render_cost_configuration_ui()
+        
+        with tab2:
+            # Get customer data from session state if available
+            customer_categories = st.session_state.get("analysis_results", {}).get("customer_categories", [])
+            render_cost_analyzer_ui(customer_categories)
     
     elif page == "Communication Processing":
         st.markdown("## Communication Processing Module")
