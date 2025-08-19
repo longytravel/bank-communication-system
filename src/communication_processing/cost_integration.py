@@ -1,6 +1,6 @@
 """
 Cost Configuration Integration
-Integrates cost configuration with communication processing and UI.
+Professional UI for cost management and analysis.
 """
 
 import streamlit as st
@@ -11,7 +11,14 @@ from pathlib import Path
 import sys
 
 # Add src to path for imports
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+# Import professional theme components
+from ui.professional_theme import (
+    create_metric_card,
+    create_status_badge,
+    create_professional_card
+)
 
 from .cost_configuration import CostConfigurationManager, CommunicationCosts, VolumeDiscounts
 
@@ -133,12 +140,14 @@ class CostAnalyzer:
         }
 
 def render_cost_configuration_ui():
-    """Render cost configuration interface."""
+    """Render professional cost configuration interface."""
     st.markdown("""
-    <div class="modern-card">
-        <h3 style="margin-top: 0; color: #1A1A1A;">💰 Cost Configuration</h3>
-        <p style="color: #6B7280;">Configure cost assumptions for different communication channels.</p>
-    </div>
+    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
+        Cost Configuration
+    </h3>
+    <p style="color: #64748B; font-size: 0.875rem; margin-bottom: 1.5rem;">
+        Configure cost assumptions for different communication channels.
+    </p>
     """, unsafe_allow_html=True)
     
     cost_manager = CostConfigurationManager()
@@ -166,50 +175,50 @@ def render_cost_configuration_ui():
     # Current costs display
     costs = cost_manager.get_current_costs()
     
-    st.markdown("### 📊 Current Cost Structure")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Current Cost Structure
+    </h4>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         letter_total = costs.letter_postage + costs.letter_printing + costs.letter_envelope + costs.letter_staff_time
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">£{letter_total:.3f}</div>
-            <div class="metric-label">LETTER COST</div>
-            <div class="metric-delta warning">Per letter</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "Letter Cost",
+            f"£{letter_total:.3f}",
+            "Per letter"
+        ), unsafe_allow_html=True)
     
     with col2:
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">£{costs.email_cost:.3f}</div>
-            <div class="metric-label">EMAIL COST</div>
-            <div class="metric-delta positive">Per email</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "Email Cost",
+            f"£{costs.email_cost:.3f}",
+            "Per email"
+        ), unsafe_allow_html=True)
     
     with col3:
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">£{costs.sms_cost:.3f}</div>
-            <div class="metric-label">SMS COST</div>
-            <div class="metric-delta positive">Per SMS</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "SMS Cost",
+            f"£{costs.sms_cost:.3f}",
+            "Per SMS"
+        ), unsafe_allow_html=True)
     
     with col4:
         ratio = letter_total / costs.email_cost if costs.email_cost > 0 else 0
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">{ratio:.0f}x</div>
-            <div class="metric-label">LETTER vs EMAIL</div>
-            <div class="metric-delta warning">Cost ratio</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "Letter vs Email",
+            f"{ratio:.0f}x",
+            "Cost ratio"
+        ), unsafe_allow_html=True)
     
     # Cost breakdown chart
-    st.markdown("### 📈 Cost Comparison by Volume")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Cost Comparison by Volume
+    </h4>
+    """, unsafe_allow_html=True)
     
     volumes = [100, 500, 1000, 5000]
     channels = ["letter", "email", "sms", "in_app"]
@@ -236,16 +245,26 @@ def render_cost_configuration_ui():
         color='Channel',
         title='Total Communication Costs by Volume',
         labels={'Total Cost': 'Total Cost (£)'},
-        text='Total Cost'
+        text='Total Cost',
+        color_discrete_sequence=['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6']
     )
     
     fig.update_traces(texttemplate='£%{text:.2f}', textposition='outside')
-    fig.update_layout(height=400)
+    fig.update_layout(
+        height=400,
+        font=dict(family="IBM Plex Sans"),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
+    )
     
     st.plotly_chart(fig, use_container_width=True)
     
     # Environmental impact
-    st.markdown("### 🌱 Environmental Impact")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Environmental Impact
+    </h4>
+    """, unsafe_allow_html=True)
     
     env_fig = px.bar(
         df,
@@ -253,64 +272,32 @@ def render_cost_configuration_ui():
         y='Carbon (kg)',
         color='Channel',
         title='Carbon Footprint by Communication Channel',
-        labels={'Carbon (kg)': 'CO2 Emissions (kg)'}
+        labels={'Carbon (kg)': 'CO2 Emissions (kg)'},
+        color_discrete_sequence=['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6']
+    )
+    
+    env_fig.update_layout(
+        height=400,
+        font=dict(family="IBM Plex Sans"),
+        plot_bgcolor='white',
+        paper_bgcolor='white'
     )
     
     st.plotly_chart(env_fig, use_container_width=True)
-    
-    # Custom scenario creation
-    with st.expander("🛠️ Create Custom Scenario"):
-        st.markdown("**Create your own cost scenario:**")
-        
-        custom_name = st.text_input("Scenario Name", "custom_scenario")
-        custom_desc = st.text_input("Description", "Custom cost assumptions")
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**Letter Costs:**")
-            custom_postage = st.number_input("Postage (£)", value=0.85, step=0.01)
-            custom_printing = st.number_input("Printing (£)", value=0.08, step=0.01)
-            custom_envelope = st.number_input("Envelope (£)", value=0.03, step=0.01)
-            custom_staff_time = st.number_input("Staff Time (£)", value=0.50, step=0.01)
-        
-        with col2:
-            st.markdown("**Digital Costs:**")
-            custom_email = st.number_input("Email (£)", value=0.002, step=0.001, format="%.3f")
-            custom_sms = st.number_input("SMS (£)", value=0.05, step=0.01)
-            custom_in_app = st.number_input("In-app (£)", value=0.001, step=0.001, format="%.3f")
-            custom_voice = st.number_input("Voice Note (£)", value=0.02, step=0.01)
-        
-        if st.button("Create Custom Scenario"):
-            custom_costs = {
-                'letter_postage': custom_postage,
-                'letter_printing': custom_printing,
-                'letter_envelope': custom_envelope,
-                'letter_staff_time': custom_staff_time,
-                'email_cost': custom_email,
-                'sms_cost': custom_sms,
-                'in_app_notification': custom_in_app,
-                'voice_note_generation': custom_voice
-            }
-            
-            try:
-                cost_manager.create_custom_scenario(custom_name, custom_desc, custom_costs)
-                st.success(f"Created custom scenario: {custom_name}")
-                st.rerun()
-            except Exception as e:
-                st.error(f"Error creating scenario: {e}")
 
 def render_cost_analyzer_ui(customer_categories: list = None):
-    """Render cost analysis interface."""
+    """Render professional cost analysis interface."""
     if not customer_categories:
         st.info("Please analyze customer data first to see cost analysis.")
         return
     
     st.markdown("""
-    <div class="modern-card">
-        <h3 style="margin-top: 0; color: #1A1A1A;">📊 Communication Cost Analysis</h3>
-        <p style="color: #6B7280;">Analyze costs and savings for different communication strategies.</p>
-    </div>
+    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
+        Communication Cost Analysis
+    </h3>
+    <p style="color: #64748B; font-size: 0.875rem; margin-bottom: 1.5rem;">
+        Analyze costs and savings for different communication strategies.
+    </p>
     """, unsafe_allow_html=True)
     
     cost_analyzer = CostAnalyzer()
@@ -328,43 +315,41 @@ def render_cost_analyzer_ui(customer_categories: list = None):
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">£{comparison['traditional']['total_cost']:.2f}</div>
-            <div class="metric-label">TRADITIONAL COST</div>
-            <div class="metric-delta warning">All letters</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "Traditional Cost",
+            f"£{comparison['traditional']['total_cost']:.2f}",
+            "All letters"
+        ), unsafe_allow_html=True)
     
     with col2:
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">£{comparison['optimized']['total_cost']:.2f}</div>
-            <div class="metric-label">OPTIMIZED COST</div>
-            <div class="metric-delta positive">Smart targeting</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "Optimized Cost",
+            f"£{comparison['optimized']['total_cost']:.2f}",
+            "Smart targeting"
+        ), unsafe_allow_html=True)
     
     with col3:
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">£{savings['cost_savings']:.2f}</div>
-            <div class="metric-label">SAVINGS</div>
-            <div class="metric-delta positive">{savings['cost_savings_percent']:.1f}% reduction</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "Savings",
+            f"£{savings['cost_savings']:.2f}",
+            f"{savings['cost_savings_percent']:.1f}% reduction",
+            "positive"
+        ), unsafe_allow_html=True)
     
     with col4:
-        st.markdown(f"""
-        <div class="modern-card">
-            <div class="metric-value">{savings['carbon_savings_kg']:.1f}kg</div>
-            <div class="metric-label">CO2 SAVED</div>
-            <div class="metric-delta positive">{savings['carbon_savings_percent']:.1f}% reduction</div>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(create_metric_card(
+            "CO2 Saved",
+            f"{savings['carbon_savings_kg']:.1f}kg",
+            f"{savings['carbon_savings_percent']:.1f}% reduction",
+            "positive"
+        ), unsafe_allow_html=True)
     
     # Strategy breakdown chart
-    st.markdown("### 📊 Cost Breakdown by Customer Category")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Cost Breakdown by Customer Category
+    </h4>
+    """, unsafe_allow_html=True)
     
     # Prepare data for visualization
     category_data = []
@@ -389,16 +374,28 @@ def render_cost_analyzer_ui(customer_categories: list = None):
             color='Strategy',
             title='Communication Costs by Customer Category',
             labels={'Cost': 'Total Cost (£)'},
-            text='Cost'
+            text='Cost',
+            barmode='group',
+            color_discrete_sequence=['#E2E8F0', '#3B82F6']
         )
         
         fig.update_traces(texttemplate='£%{text:.2f}', textposition='outside')
-        fig.update_layout(height=400, xaxis_tickangle=-45)
+        fig.update_layout(
+            height=400,
+            xaxis_tickangle=-45,
+            font=dict(family="IBM Plex Sans"),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
+        )
         
         st.plotly_chart(fig, use_container_width=True)
     
     # Channel distribution
-    st.markdown("### 📱 Communication Channel Distribution")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Communication Channel Distribution
+    </h4>
+    """, unsafe_allow_html=True)
     
     # Get channel usage from optimized strategy
     channel_usage = {}
@@ -424,75 +421,55 @@ def render_cost_analyzer_ui(customer_categories: list = None):
         
         with col1:
             # Volume pie chart
-            fig_volume = px.pie(
-                channels_df,
-                values='Volume',
-                names='Channel',
-                title='Communication Volume by Channel'
+            fig_volume = go.Figure(data=[go.Pie(
+                labels=channels_df['Channel'],
+                values=channels_df['Volume'],
+                hole=0.4,
+                marker_colors=['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6']
+            )])
+            fig_volume.update_layout(
+                title="Communication Volume by Channel",
+                font=dict(family="IBM Plex Sans"),
+                height=350
             )
             st.plotly_chart(fig_volume, use_container_width=True)
         
         with col2:
             # Cost pie chart
-            fig_cost = px.pie(
-                channels_df,
-                values='Cost',
-                names='Channel',
-                title='Communication Costs by Channel'
+            fig_cost = go.Figure(data=[go.Pie(
+                labels=channels_df['Channel'],
+                values=channels_df['Cost'],
+                hole=0.4,
+                marker_colors=['#3B82F6', '#10B981', '#F59E0B', '#8B5CF6']
+            )])
+            fig_cost.update_layout(
+                title="Communication Costs by Channel",
+                font=dict(family="IBM Plex Sans"),
+                height=350
             )
             st.plotly_chart(fig_cost, use_container_width=True)
     
-    # Scenario sensitivity analysis
-    st.markdown("### 🎯 Scenario Sensitivity Analysis")
-    
-    cost_manager = cost_analyzer.cost_manager
-    current_scenario = cost_manager.current_scenario
-    
-    scenario_results = {}
-    for scenario_name in cost_manager.scenarios.keys():
-        cost_manager.set_scenario(scenario_name)
-        scenario_comparison = cost_analyzer.compare_communication_strategies(
-            customer_categories, traditional_strategy, optimized_strategy)
-        scenario_results[scenario_name] = scenario_comparison['savings']
-    
-    # Restore original scenario
-    cost_manager.set_scenario(current_scenario)
-    
-    # Create sensitivity chart
-    sensitivity_data = []
-    for scenario, savings in scenario_results.items():
-        sensitivity_data.append({
-            'Scenario': scenario.title(),
-            'Cost Savings (£)': savings['cost_savings'],
-            'Cost Savings (%)': savings['cost_savings_percent'],
-            'Carbon Savings (kg)': savings['carbon_savings_kg']
-        })
-    
-    df_sensitivity = pd.DataFrame(sensitivity_data)
-    
-    if not df_sensitivity.empty:
-        fig_sensitivity = px.bar(
-            df_sensitivity,
-            x='Scenario',
-            y='Cost Savings (£)',
-            title='Cost Savings Across Different Scenarios',
-            text='Cost Savings (£)'
-        )
-        
-        fig_sensitivity.update_traces(texttemplate='£%{text:.2f}', textposition='outside')
-        st.plotly_chart(fig_sensitivity, use_container_width=True)
-    
     # Recommendations
-    st.markdown("### 💡 Cost Optimization Recommendations")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Cost Optimization Recommendations
+    </h4>
+    """, unsafe_allow_html=True)
     
     recommendations = []
     
     # Analyze the results for recommendations
     if savings['cost_savings_percent'] > 50:
-        recommendations.append("🎉 **Excellent savings potential!** Your optimized strategy could save over 50% on communication costs.")
+        recommendations.append({
+            "priority": "high",
+            "text": f"Excellent savings potential: Your optimized strategy could save over {savings['cost_savings_percent']:.0f}% on communication costs."
+        })
     
     if savings['carbon_savings_percent'] > 70:
-        recommendations.append("🌱 **Significant environmental impact!** Reducing carbon emissions by over 70%.")
+        recommendations.append({
+            "priority": "high",
+            "text": f"Significant environmental impact: Reducing carbon emissions by {savings['carbon_savings_percent']:.0f}%."
+        })
     
     # Check for high letter usage
     letter_volume = channel_usage.get('letter', {}).get('volume', 0)
@@ -500,89 +477,73 @@ def render_cost_analyzer_ui(customer_categories: list = None):
     letter_percentage = (letter_volume / total_volume * 100) if total_volume > 0 else 0
     
     if letter_percentage > 30:
-        recommendations.append(f"📮 **High letter usage detected** ({letter_percentage:.1f}%). Consider digital alternatives for non-vulnerable customers.")
+        recommendations.append({
+            "priority": "medium",
+            "text": f"High letter usage detected ({letter_percentage:.1f}%). Consider digital alternatives for non-vulnerable customers."
+        })
     
     if letter_percentage < 10:
-        recommendations.append(f"✅ **Excellent digital adoption** ({100-letter_percentage:.1f}% digital). Monitor regulatory compliance.")
-    
-    # Volume efficiency
-    avg_comms_per_customer = total_volume / len(customer_categories) if customer_categories else 0
-    if avg_comms_per_customer > 3:
-        recommendations.append(f"⚠️ **High communication volume** ({avg_comms_per_customer:.1f} per customer). Consider reducing for better customer experience.")
-    
-    if avg_comms_per_customer < 2:
-        recommendations.append(f"✅ **Efficient communication** ({avg_comms_per_customer:.1f} per customer). Good balance achieved.")
+        recommendations.append({
+            "priority": "low",
+            "text": f"Excellent digital adoption ({100-letter_percentage:.1f}% digital). Monitor regulatory compliance."
+        })
     
     # Display recommendations
-    if recommendations:
-        for rec in recommendations:
-            st.info(rec)
-    else:
-        st.info("💡 Run analysis with customer data to get personalized recommendations.")
+    for rec in recommendations:
+        color = "#10B981" if rec["priority"] == "high" else "#F59E0B" if rec["priority"] == "medium" else "#3B82F6"
+        st.markdown(f"""
+        <div style="padding: 0.75rem; border-left: 3px solid {color}; 
+                    background: #F8FAFC; margin-bottom: 0.5rem; border-radius: 0 6px 6px 0;">
+            <div style="color: #0F172A; font-size: 0.875rem;">{rec["text"]}</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Export results
-    st.markdown("### 📥 Export Analysis")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Export Analysis
+    </h4>
+    """, unsafe_allow_html=True)
     
     col1, col2 = st.columns(2)
     
     with col1:
-        if st.button("📊 Export Cost Analysis CSV"):
-            export_data = []
-            for category, data in comparison['optimized']['categories'].items():
-                export_data.append({
-                    'Category': category,
-                    'Customer Count': data['customer_count'],
-                    'Total Cost': data['total_cost'],
-                    'Cost per Customer': data['cost_per_customer'],
-                    'Total Communications': data['total_communications'],
-                    'Carbon (kg)': data['total_carbon_g'] / 1000
-                })
-            
-            df_export = pd.DataFrame(export_data)
-            csv = df_export.to_csv(index=False)
-            
-            st.download_button(
-                label="📊 Download Analysis CSV",
-                data=csv,
-                file_name=f"cost_analysis_{cost_manager.current_scenario}.csv",
-                mime="text/csv"
-            )
+        export_data = []
+        for category, data in comparison['optimized']['categories'].items():
+            export_data.append({
+                'Category': category,
+                'Customer Count': data['customer_count'],
+                'Total Cost': data['total_cost'],
+                'Cost per Customer': data['cost_per_customer'],
+                'Total Communications': data['total_communications'],
+                'Carbon (kg)': data['total_carbon_g'] / 1000
+            })
+        
+        df_export = pd.DataFrame(export_data)
+        csv = df_export.to_csv(index=False)
+        
+        st.download_button(
+            label="Export Cost Analysis CSV",
+            data=csv,
+            file_name=f"cost_analysis_{cost_analyzer.cost_manager.current_scenario}.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
     
     with col2:
-        if st.button("💾 Save Cost Configuration"):
-            config_summary = cost_manager.get_scenario_summary()
-            
-            import json
-            config_json = json.dumps(config_summary, indent=2)
-            
-            st.download_button(
-                label="💾 Download Configuration JSON",
-                data=config_json,
-                file_name=f"cost_config_{cost_manager.current_scenario}.json",
-                mime="application/json"
-            )
-
-# Main function for testing
-def main():
-    """Test the cost configuration system."""
-    st.title("💰 Communication Cost Management System")
-    
-    tab1, tab2 = st.tabs(["Cost Configuration", "Cost Analysis"])
-    
-    with tab1:
-        render_cost_configuration_ui()
-    
-    with tab2:
-        # For testing, create sample customer categories
-        sample_customers = [
-            {"category": "Digital-first self-serve"},
-            {"category": "Digital-first self-serve"},
-            {"category": "Vulnerable / extra-support"},
-            {"category": "Low/no-digital (offline-preferred)"},
-            {"category": "Assisted-digital"}
-        ]
+        import json
+        config_summary = {
+            "scenario": cost_analyzer.cost_manager.current_scenario,
+            "savings": savings,
+            "channel_usage": channel_usage
+        }
         
-        render_cost_analyzer_ui(sample_customers)
-
-if __name__ == "__main__":
-    main()
+        config_json = json.dumps(config_summary, indent=2)
+        
+        st.download_button(
+            label="Export Configuration JSON",
+            data=config_json,
+            file_name=f"cost_config_{cost_analyzer.cost_manager.current_scenario}.json",
+            mime="application/json",
+            use_container_width=True
+        )

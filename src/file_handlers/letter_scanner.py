@@ -1,6 +1,6 @@
 """
-Enhanced Letter Scanner with File Upload and Management
-Allows adding new letters via upload and folder monitoring.
+Enhanced Letter Scanner with Professional UI
+Professional document management and classification system.
 """
 
 import streamlit as st
@@ -286,7 +286,7 @@ class EnhancedLetterScanner:
             filepath = letter['filepath']
             filename = letter['filename']
             
-            status_text.text(f"📄 Classifying {filename}...")
+            status_text.text(f"Classifying {filename}...")
             progress_bar.progress((i + 1) / len(unclassified_letters))
             
             # Read letter content
@@ -349,10 +349,14 @@ class EnhancedLetterScanner:
 
 def render_enhanced_letter_management():
     """Main function to render the enhanced letter management page."""
+    
+    # Create professional card HTML directly
     st.markdown("""
-    <div class="modern-card">
-        <h2 style="margin-top: 0; color: #1A1A1A;">📄 Enhanced Letter Management</h2>
-        <p style="color: #6B7280;">Upload new letters, manage existing ones, and classify content using AI.</p>
+    <div class="pro-card">
+        <div class="pro-card-header">
+            <h3 class="pro-card-title">Letter Management</h3>
+            <p class="pro-card-subtitle">Document classification and management system</p>
+        </div>
     </div>
     """, unsafe_allow_html=True)
     
@@ -360,7 +364,7 @@ def render_enhanced_letter_management():
     scanner = EnhancedLetterScanner()
     
     # Create tabs for different functions
-    tab1, tab2, tab3, tab4 = st.tabs(["📁 Browse Letters", "📤 Upload New", "✍️ Create Letter", "⚙️ Manage"])
+    tab1, tab2, tab3, tab4 = st.tabs(["Browse Letters", "Upload New", "Create Letter", "Manage"])
     
     with tab1:
         render_browse_letters_tab(scanner)
@@ -377,16 +381,16 @@ def render_enhanced_letter_management():
 def render_browse_letters_tab(scanner: EnhancedLetterScanner):
     """Render the browse letters tab."""
     st.markdown("""
-    <div class="modern-card">
-        <h3 style="margin-top: 0; color: #1A1A1A;">📋 All Letters</h3>
-    </div>
+    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
+        Document Library
+    </h3>
     """, unsafe_allow_html=True)
     
     # Scan letters
     letters = scanner.scan_all_letters()
     
     if not letters:
-        st.info("No letters found. Upload some letters or create demo letters to get started.")
+        st.info("No letters found. Upload documents or create new letters to get started.")
         return
     
     # Quick stats
@@ -396,36 +400,69 @@ def render_browse_letters_tab(scanner: EnhancedLetterScanner):
     classified_count = sum(1 for letter in letters if letter['classification'])
     
     with col1:
-        st.metric("Total Letters", len(letters))
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-label">Total Documents</div>
+            <div class="metric-value">{len(letters):,}</div>
+            <div class="metric-delta">Active files</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col2:
-        st.metric("Demo Letters", len(letters_by_source['demo']))
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-label">Demo Letters</div>
+            <div class="metric-value">{len(letters_by_source['demo']):,}</div>
+            <div class="metric-delta">Sample documents</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col3:
-        st.metric("Uploaded Letters", len(letters_by_source['uploaded']))
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-label">Uploaded</div>
+            <div class="metric-value">{len(letters_by_source['uploaded']):,}</div>
+            <div class="metric-delta">User documents</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     with col4:
-        st.metric("Classified", f"{classified_count}/{len(letters)}")
+        classification_rate = (classified_count / len(letters) * 100) if letters else 0
+        st.markdown(f"""
+        <div class="metric-container">
+            <div class="metric-label">Classified</div>
+            <div class="metric-value">{classified_count}/{len(letters)}</div>
+            <div class="metric-delta">{classification_rate:.0f}% complete</div>
+        </div>
+        """, unsafe_allow_html=True)
     
     # Classification controls
-    st.markdown("### 🤖 AI Classification")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        AI Classification
+    </h4>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        if st.button("🧠 Classify New Letters", use_container_width=True):
+        if st.button("Classify New Letters", use_container_width=True):
             classify_letters(scanner, letters, force_reclassify=False)
     
     with col2:
-        if st.button("🔄 Reclassify All", use_container_width=True):
+        if st.button("Reclassify All", use_container_width=True):
             classify_letters(scanner, letters, force_reclassify=True)
     
     with col3:
-        if st.button("🔄 Refresh List", use_container_width=True):
+        if st.button("Refresh List", use_container_width=True, type="secondary"):
             st.rerun()
     
     # Display letters table
-    st.markdown("### 📋 Letters Overview")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Document Overview
+    </h4>
+    """, unsafe_allow_html=True)
     
     # Create summary DataFrame
     letter_data = []
@@ -454,30 +491,36 @@ def render_browse_letters_tab(scanner: EnhancedLetterScanner):
 def render_upload_letters_tab(scanner: EnhancedLetterScanner):
     """Render the upload new letters tab."""
     st.markdown("""
-    <div class="modern-card">
-        <h3 style="margin-top: 0; color: #1A1A1A;">📤 Upload New Letters</h3>
-        <p style="color: #6B7280;">Upload letter files from your computer for classification.</p>
-    </div>
+    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
+        Upload Documents
+    </h3>
+    <p style="color: #64748B; font-size: 0.875rem; margin-bottom: 1.5rem;">
+        Upload letter files for AI classification and processing.
+    </p>
     """, unsafe_allow_html=True)
     
     # File upload
     uploaded_files = st.file_uploader(
-        "Choose letter files",
+        "Choose files",
         type=['txt', 'md', 'docx', 'pdf'],
         accept_multiple_files=True,
-        help="Upload one or more letter files. Supported formats: TXT, MD, DOCX, PDF"
+        help="Supported formats: TXT, MD, DOCX, PDF"
     )
     
     if uploaded_files:
-        st.markdown(f"### 📁 Selected Files ({len(uploaded_files)})")
+        st.markdown(f"""
+        <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1rem 0;">
+            Selected Files ({len(uploaded_files)})
+        </h4>
+        """, unsafe_allow_html=True)
         
         # Preview files
         for file in uploaded_files:
-            with st.expander(f"📄 {file.name} ({file.size:,} bytes)"):
+            with st.expander(f"{file.name} ({file.size:,} bytes)"):
                 if file.type.startswith('text/') or file.name.endswith('.txt'):
                     try:
                         content = str(file.read(), "utf-8")
-                        st.text_area(f"Preview of {file.name}:", content[:500] + "..." if len(content) > 500 else content, height=150, disabled=True)
+                        st.text_area("Preview:", content[:500] + "..." if len(content) > 500 else content, height=150, disabled=True)
                         file.seek(0)  # Reset file pointer
                     except:
                         st.warning("Could not preview this file")
@@ -502,57 +545,44 @@ def render_upload_letters_tab(scanner: EnhancedLetterScanner):
             )
         
         # Upload button
-        if st.button("📤 Upload Files", type="primary", use_container_width=True):
+        if st.button("Upload Files", type="primary", use_container_width=True):
             upload_results = []
             
-            progress_bar = st.progress(0)
-            status_text = st.empty()
-            
-            for i, file in enumerate(uploaded_files):
-                status_text.text(f"Uploading {file.name}...")
-                progress_bar.progress((i + 1) / len(uploaded_files))
-                
-                saved_path = scanner.upload_new_letter(file, save_to_uploaded=(save_location == "uploaded"))
-                
-                if saved_path:
-                    upload_results.append({
-                        'original_name': file.name,
-                        'saved_path': saved_path,
-                        'saved_name': saved_path.name
-                    })
-            
-            progress_bar.empty()
-            status_text.empty()
+            with st.spinner("Uploading files..."):
+                for file in uploaded_files:
+                    saved_path = scanner.upload_new_letter(file, save_to_uploaded=(save_location == "uploaded"))
+                    
+                    if saved_path:
+                        upload_results.append({
+                            'original_name': file.name,
+                            'saved_path': saved_path,
+                            'saved_name': saved_path.name
+                        })
             
             if upload_results:
-                st.success(f"✅ Successfully uploaded {len(upload_results)} files!")
-                
-                # Show upload results
-                with st.expander("📋 Upload Results"):
-                    for result in upload_results:
-                        st.write(f"• {result['original_name']} → {result['saved_name']}")
+                st.success(f"Successfully uploaded {len(upload_results)} files")
                 
                 # Auto-classify if requested
                 if auto_classify:
-                    st.info("🤖 Auto-classifying uploaded letters...")
-                    letters = scanner.scan_all_letters()
-                    new_letters = [l for l in letters if str(l['filepath']) in [str(r['saved_path']) for r in upload_results]]
-                    
-                    if new_letters:
-                        classifications = scanner.classify_letters(new_letters, force_reclassify=True)
-                        st.success(f"✅ Classified {len(classifications)} letters!")
+                    with st.spinner("Classifying uploaded documents..."):
+                        letters = scanner.scan_all_letters()
+                        new_letters = [l for l in letters if str(l['filepath']) in [str(r['saved_path']) for r in upload_results]]
+                        
+                        if new_letters:
+                            classifications = scanner.classify_letters(new_letters, force_reclassify=True)
+                            st.success(f"Classified {len(classifications)} documents")
                 
-                st.balloons()
-                time.sleep(2)
                 st.rerun()
 
 def render_create_letter_tab(scanner: EnhancedLetterScanner):
     """Render the create new letter tab."""
     st.markdown("""
-    <div class="modern-card">
-        <h3 style="margin-top: 0; color: #1A1A1A;">✍️ Create New Letter</h3>
-        <p style="color: #6B7280;">Create a new letter by typing or pasting content.</p>
-    </div>
+    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
+        Create New Letter
+    </h3>
+    <p style="color: #64748B; font-size: 0.875rem; margin-bottom: 1.5rem;">
+        Create a new letter document by typing or pasting content.
+    </p>
     """, unsafe_allow_html=True)
     
     # Letter details
@@ -560,9 +590,9 @@ def render_create_letter_tab(scanner: EnhancedLetterScanner):
     
     with col1:
         filename = st.text_input(
-            "Letter filename:",
+            "Filename:",
             placeholder="my_new_letter.txt",
-            help="Enter a filename for your letter (will add .txt if not specified)"
+            help="Enter a filename (will add .txt if not specified)"
         )
     
     with col2:
@@ -576,12 +606,7 @@ def render_create_letter_tab(scanner: EnhancedLetterScanner):
     letter_content = st.text_area(
         "Letter content:",
         height=300,
-        placeholder="""Dear [Customer Name],
-
-Write your letter content here...
-
-Best regards,
-Resonance Bank""",
+        placeholder="Enter your letter content here...",
         help="Enter the full content of your letter"
     )
     
@@ -589,54 +614,48 @@ Resonance Bank""",
     letter_type_hint = st.selectbox(
         "Expected classification (optional):",
         ["", "REGULATORY", "PROMOTIONAL", "INFORMATION"],
-        help="Hint for what type of letter this should be (optional)"
+        help="Optional hint for expected classification"
     )
     
     # Create button
     col1, col2, col3 = st.columns([1, 2, 1])
     
     with col2:
-        if st.button("✍️ Create Letter", type="primary", use_container_width=True, disabled=not filename or not letter_content):
+        if st.button("Create Letter", type="primary", use_container_width=True, disabled=not filename or not letter_content):
             if filename and letter_content:
                 # Create the letter
                 saved_path = scanner.create_new_letter_from_text(filename, letter_content, source)
                 
                 if saved_path:
-                    st.success(f"✅ Created letter: {saved_path.name}")
+                    st.success(f"Created letter: {saved_path.name}")
                     
                     # Auto-classify the new letter
-                    st.info("🤖 Classifying new letter...")
-                    
-                    letters = scanner.scan_all_letters()
-                    new_letter = next((l for l in letters if l['filepath'] == str(saved_path)), None)
-                    
-                    if new_letter:
-                        classifications = scanner.classify_letters([new_letter], force_reclassify=True)
+                    with st.spinner("Classifying new letter..."):
+                        letters = scanner.scan_all_letters()
+                        new_letter = next((l for l in letters if l['filepath'] == str(saved_path)), None)
                         
-                        if classifications:
-                            classification = classifications.get(str(saved_path), {})
-                            predicted_type = classification.get('classification', 'UNKNOWN')
-                            confidence = classification.get('confidence', 0)
+                        if new_letter:
+                            classifications = scanner.classify_letters([new_letter], force_reclassify=True)
                             
-                            st.success(f"✅ Classified as: **{predicted_type}** (Confidence: {confidence}/10)")
-                            
-                            if letter_type_hint and letter_type_hint != predicted_type:
-                                st.warning(f"⚠️ Note: Expected {letter_type_hint} but classified as {predicted_type}")
-                        else:
-                            st.warning("Classification failed, but letter was created successfully.")
+                            if classifications:
+                                classification = classifications.get(str(saved_path), {})
+                                predicted_type = classification.get('classification', 'UNKNOWN')
+                                confidence = classification.get('confidence', 0)
+                                
+                                st.success(f"Classified as: **{predicted_type}** (Confidence: {confidence}/10)")
+                                
+                                if letter_type_hint and letter_type_hint != predicted_type:
+                                    st.warning(f"Note: Expected {letter_type_hint} but classified as {predicted_type}")
                     
                     time.sleep(2)
                     st.rerun()
-                else:
-                    st.error("Failed to create letter.")
 
 def render_manage_letters_tab(scanner: EnhancedLetterScanner):
     """Render the manage letters tab."""
     st.markdown("""
-    <div class="modern-card">
-        <h3 style="margin-top: 0; color: #1A1A1A;">⚙️ Manage Letters</h3>
-        <p style="color: #6B7280;">Organize, move, and delete letters.</p>
-    </div>
+    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
+        Manage Documents
+    </h3>
     """, unsafe_allow_html=True)
     
     letters = scanner.scan_all_letters()
@@ -650,7 +669,7 @@ def render_manage_letters_tab(scanner: EnhancedLetterScanner):
                      for letter in letters]
     
     selected_index = st.selectbox(
-        "Select letter to manage:",
+        "Select document:",
         range(len(letter_options)),
         format_func=lambda x: letter_options[x]
     )
@@ -658,43 +677,50 @@ def render_manage_letters_tab(scanner: EnhancedLetterScanner):
     selected_letter = letters[selected_index]
     
     # Letter actions
-    st.markdown("### 🔧 Actions")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1rem 0;">
+        Actions
+    </h4>
+    """, unsafe_allow_html=True)
     
     col1, col2, col3, col4 = st.columns(4)
     
     with col1:
-        if st.button("📖 View Content", use_container_width=True):
+        if st.button("View Content", use_container_width=True):
             content = scanner.read_letter_content(Path(selected_letter['filepath']))
             if content:
-                st.markdown("### 📄 Letter Content")
+                st.markdown("### Document Content")
                 st.text_area(f"Content of {selected_letter['filename']}:", content, height=400, disabled=True)
     
     with col2:
-        if st.button("🔄 Reclassify", use_container_width=True):
+        if st.button("Reclassify", use_container_width=True):
             classifications = scanner.classify_letters([selected_letter], force_reclassify=True)
             if classifications:
-                st.success("✅ Letter reclassified!")
+                st.success("Document reclassified")
                 st.rerun()
     
     with col3:
         new_location = st.selectbox("Move to:", ["uploaded", "demo", "root"], key="move_location")
-        if st.button("📁 Move", use_container_width=True):
+        if st.button("Move", use_container_width=True):
             new_path = scanner.move_letter(selected_letter['filepath'], new_location)
             if new_path:
-                st.success(f"✅ Moved to {new_location}")
+                st.success(f"Moved to {new_location}")
                 st.rerun()
     
     with col4:
-        if st.button("🗑️ Delete", use_container_width=True, type="secondary"):
+        if st.button("Delete", use_container_width=True, type="secondary"):
             if scanner.delete_letter(selected_letter['filepath']):
-                st.success("✅ Letter deleted!")
+                st.success("Document deleted")
                 st.rerun()
-            else:
-                st.error("Failed to delete letter.")
     
     # Letter details
     if selected_letter['classification']:
-        st.markdown("### 📊 Classification Details")
+        st.markdown("""
+        <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+            Classification Details
+        </h4>
+        """, unsafe_allow_html=True)
+        
         classification = selected_letter['classification']
         
         col1, col2, col3 = st.columns(3)
@@ -713,7 +739,11 @@ def render_manage_letters_tab(scanner: EnhancedLetterScanner):
 
 def render_letter_details_section(letters: List[Dict], scanner: EnhancedLetterScanner):
     """Render letter details section."""
-    st.markdown("### 🔍 Letter Details")
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Document Details
+    </h4>
+    """, unsafe_allow_html=True)
     
     if not letters:
         return
@@ -723,7 +753,7 @@ def render_letter_details_section(letters: List[Dict], scanner: EnhancedLetterSc
                      for letter in letters]
     
     selected_index = st.selectbox(
-        "Select letter to view details:",
+        "Select document to view details:",
         range(len(letter_options)),
         format_func=lambda x: letter_options[x]
     )
@@ -735,67 +765,88 @@ def render_letter_details_section(letters: List[Dict], scanner: EnhancedLetterSc
     col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown(f"**Filename:** {selected_letter['filename']}")
-        st.markdown(f"**Source:** {selected_letter['source'].title()}")
-        st.markdown(f"**Size:** {selected_letter['size_bytes']:,} bytes")
-        st.markdown(f"**Modified:** {selected_letter['modified_date'].strftime('%Y-%m-%d %H:%M:%S')}")
+        details = {
+            "Filename": selected_letter['filename'],
+            "Source": selected_letter['source'].title(),
+            "Size": f"{selected_letter['size_bytes']:,} bytes",
+            "Modified": selected_letter['modified_date'].strftime('%Y-%m-%d %H:%M:%S')
+        }
         
         if classification:
-            st.markdown(f"**Classification:** {classification.get('classification', 'Unknown')}")
-            st.markdown(f"**Confidence:** {classification.get('confidence', 0)}/10")
-            st.markdown(f"**Classified on:** {classification.get('classified_date', 'Unknown')}")
+            details.update({
+                "Classification": classification.get('classification', 'Unknown'),
+                "Confidence": f"{classification.get('confidence', 0)}/10",
+                "Classified on": classification.get('classified_date', 'Unknown')
+            })
+        
+        for key, value in details.items():
+            st.markdown(f"""
+            <div style="display: flex; justify-content: space-between; padding: 0.25rem 0; border-bottom: 1px solid #E2E8F0;">
+                <span style="font-weight: 500; color: #64748B; font-size: 0.875rem;">{key}:</span>
+                <span style="color: #0F172A; font-size: 0.875rem;">{value}</span>
+            </div>
+            """, unsafe_allow_html=True)
     
     with col2:
         # Quick actions
-        if st.button("📖 View Content", use_container_width=True, key="details_view"):
+        if st.button("View Content", use_container_width=True, key="details_view"):
             content = scanner.read_letter_content(Path(selected_letter['filepath']))
             if content:
-                with st.expander("📄 Letter Content", expanded=True):
+                with st.expander("Document Content", expanded=True):
                     st.text_area("Content:", content, height=300, disabled=True)
     
-    # Show classification reasoning
+   # Show classification reasoning
     if classification:
-        st.markdown("### 🧠 AI Classification Analysis")
-        reasoning = classification.get('reasoning', 'No reasoning provided')
-        st.info(reasoning)
-        
-        # Key indicators
-        indicators = classification.get('key_indicators', [])
-        if indicators:
-            st.markdown("### 🔑 Key Indicators")
-            for indicator in indicators:
-                st.markdown(f"• {indicator}")
+       st.markdown("""
+       <h5 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1rem 0 0.5rem 0;">
+           AI Analysis
+       </h5>
+       """, unsafe_allow_html=True)
+       
+       reasoning = classification.get('reasoning', 'No reasoning provided')
+       st.info(reasoning)
+       
+       # Show key indicators if available
+       indicators = classification.get('key_indicators', [])
+       if indicators:
+           st.markdown("""
+           <h5 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1rem 0 0.5rem 0;">
+               Key Indicators
+           </h5>
+           """, unsafe_allow_html=True)
+           for indicator in indicators:
+               st.markdown(f"• {indicator}")
 
 def classify_letters(scanner: EnhancedLetterScanner, letters: List[Dict], force_reclassify: bool):
-    """Helper function to classify letters with progress indication."""
-    with st.container():
-        st.markdown("""
-        <div class="modern-card primary">
-            <h3 style="margin-top: 0; color: white;">🔄 Running AI Classification</h3>
-            <p style="color: rgba(255,255,255,0.9); margin-bottom: 0;">
-                Claude is analyzing your letters for classification...
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        classifications = scanner.classify_letters(letters, force_reclassify=force_reclassify)
-        
-        if classifications:
-            st.success(f"✅ Successfully classified {len(classifications)} letters!")
-            st.rerun()
+   """Helper function to classify letters with progress indication."""
+   with st.container():
+       st.markdown("""
+       <div class="pro-card primary">
+           <h3 style="margin-top: 0; color: white;">Running AI Classification</h3>
+           <p style="color: rgba(255,255,255,0.9); margin-bottom: 0;">
+               Claude is analyzing your letters for classification...
+           </p>
+       </div>
+       """, unsafe_allow_html=True)
+       
+       classifications = scanner.classify_letters(letters, force_reclassify=force_reclassify)
+       
+       if classifications:
+           st.success(f"Successfully classified {len(classifications)} letters!")
+           st.rerun()
 
-# Main function for the enhanced letter scanner
+# Main function for testing
 def main():
-    """Main function for testing the enhanced letter scanner."""
-    st.set_page_config(
-        page_title="Enhanced Letter Management",
-        page_icon="📄",
-        layout="wide"
-    )
-    
-    st.title("📄 Enhanced Letter Management System")
-    
-    render_enhanced_letter_management()
+   """Main function for testing the letter scanner independently."""
+   st.set_page_config(
+       page_title="Letter Management",
+       page_icon="📄",
+       layout="wide"
+   )
+   
+   st.title("Letter Management System")
+   
+   render_enhanced_letter_management()
 
 if __name__ == "__main__":
-    main()
+   main()
