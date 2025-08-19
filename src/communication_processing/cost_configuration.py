@@ -226,7 +226,11 @@ class CostConfigurationManager:
             "email": costs.email_cost + (costs.email_staff_minutes / 60 * costs.staff_hourly_rate),
             "sms": costs.sms_cost + (costs.sms_staff_minutes / 60 * costs.staff_hourly_rate),
             "in_app": costs.in_app_notification,
-            "voice_note": costs.voice_note_generation
+            "voice_note": costs.voice_note_generation,
+            "phone": 0.0,  # Phone calls have no direct cost in our model
+            "braille": (costs.letter_postage + costs.letter_printing + 
+                       costs.letter_envelope + costs.letter_staff_time) * 1.5,  # 50% more than regular letter
+            "audio": costs.voice_note_generation  # Similar to voice note
         }
         
         if channel not in base_costs:
@@ -252,7 +256,10 @@ class CostConfigurationManager:
             "email": costs.email_carbon_g,
             "sms": costs.sms_carbon_g,
             "in_app": costs.in_app_carbon_g,
-            "voice_note": costs.email_carbon_g  # Similar to email
+            "voice_note": costs.email_carbon_g,  # Similar to email
+            "phone": 0.5,  # Minimal carbon footprint for phone calls
+            "braille": costs.letter_carbon_g * 1.2,  # Slightly more than regular letter
+            "audio": costs.email_carbon_g  # Similar to email
         }
         
         total_carbon = carbon_per_item.get(channel, 0) * volume
@@ -267,3 +274,45 @@ class CostConfigurationManager:
             "total_carbon_g": total_carbon,
             "total_carbon_kg": total_carbon / 1000
         }
+    
+    def create_custom_scenario(self, name: str, description: str, custom_costs: Dict[str, float]):
+        """Create a custom cost scenario."""
+        # Create custom costs object
+        costs = CommunicationCosts(**custom_costs)
+        
+        # Use standard discounts
+        discounts = VolumeDiscounts()
+        
+        # Add to scenarios
+        self.scenarios[name] = ScenarioAssumptions(
+            name=name,
+            costs=costs,
+            discounts=discounts,
+            description=description
+        )
+        
+        # Save configuration
+        self._save_config()
+        self.logger.info(f"Created custom scenario: {name}")
+    
+    def get_scenario_summary(self) -> Dict[str, Any]:
+        """Get summary of all scenarios."""
+        summary = {
+            "current_scenario": self.current_scenario,
+            "scenarios": {}
+        }
+        
+        for name, scenario in self.scenarios.items():
+            costs = scenario.costs
+            letter_total = costs.letter_postage + costs.letter_printing + costs.letter_envelope + costs.letter_staff_time
+            
+            summary["scenarios"][name] = {
+                "name": scenario.name,
+                "description": scenario.description,
+                "letter_cost": letter_total,
+                "email_cost": costs.email_cost,
+                "sms_cost": costs.sms_cost,
+                "cost_ratio_letter_to_email": letter_total / costs.email_cost if costs.email_cost > 0 else 0
+            }
+        
+        return summary

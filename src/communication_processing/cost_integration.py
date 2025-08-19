@@ -98,7 +98,7 @@ class CostAnalyzer:
         if category == "Digital-first self-serve":
             return {"email": 1, "in_app": 1, "voice_note": 1}
         elif category == "Vulnerable / extra-support":
-            return {"letter": 1, "phone": 1}  # Note: phone has no direct cost in our model
+            return {"letter": 1}  # Removed phone since it has no cost in our model
         elif category == "Low/no-digital (offline-preferred)":
             return {"letter": 1, "email": 1}
         elif category == "Accessibility & alternate-format needs":
@@ -107,7 +107,7 @@ class CostAnalyzer:
             return {"email": 1, "sms": 1}
         else:
             # Default strategy
-            return base_strategy
+            return base_strategy if base_strategy else {"email": 1}
     
     def compare_communication_strategies(self, customer_categories: list, 
                                        traditional_strategy: dict,
@@ -284,6 +284,48 @@ def render_cost_configuration_ui():
     )
     
     st.plotly_chart(env_fig, use_container_width=True)
+    
+    # Custom scenario creation
+    with st.expander("Create Custom Scenario"):
+        st.markdown("**Create your own cost scenario:**")
+        
+        custom_name = st.text_input("Scenario Name", "custom_scenario")
+        custom_desc = st.text_input("Description", "Custom cost assumptions")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Letter Costs:**")
+            custom_postage = st.number_input("Postage (£)", value=0.85, step=0.01)
+            custom_printing = st.number_input("Printing (£)", value=0.08, step=0.01)
+            custom_envelope = st.number_input("Envelope (£)", value=0.03, step=0.01)
+            custom_staff_time = st.number_input("Staff Time (£)", value=0.50, step=0.01)
+        
+        with col2:
+            st.markdown("**Digital Costs:**")
+            custom_email = st.number_input("Email (£)", value=0.002, step=0.001, format="%.3f")
+            custom_sms = st.number_input("SMS (£)", value=0.05, step=0.01)
+            custom_in_app = st.number_input("In-app (£)", value=0.001, step=0.001, format="%.3f")
+            custom_voice = st.number_input("Voice Note (£)", value=0.02, step=0.01)
+        
+        if st.button("Create Custom Scenario"):
+            custom_costs = {
+                'letter_postage': custom_postage,
+                'letter_printing': custom_printing,
+                'letter_envelope': custom_envelope,
+                'letter_staff_time': custom_staff_time,
+                'email_cost': custom_email,
+                'sms_cost': custom_sms,
+                'in_app_notification': custom_in_app,
+                'voice_note_generation': custom_voice
+            }
+            
+            try:
+                cost_manager.create_custom_scenario(custom_name, custom_desc, custom_costs)
+                st.success(f"Created custom scenario: {custom_name}")
+                st.rerun()
+            except Exception as e:
+                st.error(f"Error creating scenario: {e}")
 
 def render_cost_analyzer_ui(customer_categories: list = None):
     """Render professional cost analysis interface."""
@@ -449,6 +491,55 @@ def render_cost_analyzer_ui(customer_categories: list = None):
             )
             st.plotly_chart(fig_cost, use_container_width=True)
     
+    # Scenario sensitivity analysis
+    st.markdown("""
+    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
+        Scenario Sensitivity Analysis
+    </h4>
+    """, unsafe_allow_html=True)
+    
+    current_scenario_backup = cost_analyzer.cost_manager.current_scenario
+    
+    scenario_results = {}
+    for scenario_name in cost_analyzer.cost_manager.scenarios.keys():
+        cost_analyzer.cost_manager.set_scenario(scenario_name)
+        scenario_comparison = cost_analyzer.compare_communication_strategies(
+            customer_categories, traditional_strategy, optimized_strategy)
+        scenario_results[scenario_name] = scenario_comparison['savings']
+    
+    # Restore original scenario
+    cost_analyzer.cost_manager.set_scenario(current_scenario_backup)
+    
+    # Create sensitivity chart
+    sensitivity_data = []
+    for scenario, savings in scenario_results.items():
+        sensitivity_data.append({
+            'Scenario': scenario.title(),
+            'Cost Savings (£)': savings['cost_savings'],
+            'Cost Savings (%)': savings['cost_savings_percent'],
+            'Carbon Savings (kg)': savings['carbon_savings_kg']
+        })
+    
+    df_sensitivity = pd.DataFrame(sensitivity_data)
+    
+    if not df_sensitivity.empty:
+        fig_sensitivity = px.bar(
+            df_sensitivity,
+            x='Scenario',
+            y='Cost Savings (£)',
+            title='Cost Savings Across Different Scenarios',
+            text='Cost Savings (£)',
+            color_discrete_sequence=['#3B82F6']
+        )
+        
+        fig_sensitivity.update_traces(texttemplate='£%{text:.2f}', textposition='outside')
+        fig_sensitivity.update_layout(
+            font=dict(family="IBM Plex Sans"),
+            plot_bgcolor='white',
+            paper_bgcolor='white'
+        )
+        st.plotly_chart(fig_sensitivity, use_container_width=True)
+    
     # Recommendations
     st.markdown("""
     <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
@@ -472,8 +563,8 @@ def render_cost_analyzer_ui(customer_categories: list = None):
         })
     
     # Check for high letter usage
-    letter_volume = channel_usage.get('letter', {}).get('volume', 0)
-    total_volume = sum(data['volume'] for data in channel_usage.values())
+    letter_volume = channel_usage.get('letter', {}).get('volume', 0) if channel_usage else 0
+    total_volume = sum(data['volume'] for data in channel_usage.values()) if channel_usage else 0
     letter_percentage = (letter_volume / total_volume * 100) if total_volume > 0 else 0
     
     if letter_percentage > 30:
@@ -486,6 +577,20 @@ def render_cost_analyzer_ui(customer_categories: list = None):
         recommendations.append({
             "priority": "low",
             "text": f"Excellent digital adoption ({100-letter_percentage:.1f}% digital). Monitor regulatory compliance."
+        })
+    
+    # Volume efficiency
+    avg_comms_per_customer = total_volume / len(customer_categories) if customer_categories else 0
+    if avg_comms_per_customer > 3:
+        recommendations.append({
+            "priority": "medium",
+            "text": f"High communication volume ({avg_comms_per_customer:.1f} per customer). Consider reducing for better customer experience."
+        })
+    
+    if avg_comms_per_customer < 2:
+        recommendations.append({
+            "priority": "low",
+            "text": f"Efficient communication ({avg_comms_per_customer:.1f} per customer). Good balance achieved."
         })
     
     # Display recommendations
@@ -534,11 +639,16 @@ def render_cost_analyzer_ui(customer_categories: list = None):
         import json
         config_summary = {
             "scenario": cost_analyzer.cost_manager.current_scenario,
-            "savings": savings,
-            "channel_usage": channel_usage
+            "savings": {
+                "cost_savings": savings['cost_savings'],
+                "cost_savings_percent": savings['cost_savings_percent'],
+                "carbon_savings_kg": savings['carbon_savings_kg'],
+                "carbon_savings_percent": savings['carbon_savings_percent']
+            },
+            "channel_usage": {k: v for k, v in channel_usage.items()} if channel_usage else {}
         }
         
-        config_json = json.dumps(config_summary, indent=2)
+        config_json = json.dumps(config_summary, indent=2, default=str)
         
         st.download_button(
             label="Export Configuration JSON",
@@ -547,3 +657,28 @@ def render_cost_analyzer_ui(customer_categories: list = None):
             mime="application/json",
             use_container_width=True
         )
+
+# Main function for testing
+def main():
+    """Test the cost configuration system."""
+    st.title("Communication Cost Management System")
+    
+    tab1, tab2 = st.tabs(["Cost Configuration", "Cost Analysis"])
+    
+    with tab1:
+        render_cost_configuration_ui()
+    
+    with tab2:
+        # For testing, create sample customer categories
+        sample_customers = [
+            {"category": "Digital-first self-serve"},
+            {"category": "Digital-first self-serve"},
+            {"category": "Vulnerable / extra-support"},
+            {"category": "Low/no-digital (offline-preferred)"},
+            {"category": "Assisted-digital"}
+        ]
+        
+        render_cost_analyzer_ui(sample_customers)
+
+if __name__ == "__main__":
+    main()
