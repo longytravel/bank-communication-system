@@ -1,6 +1,6 @@
 {
-  "last_updated": "2025-08-14T06:29:07.595268",
-  "current_scenario": "realistic",
+  "last_updated": "2025-08-19T16:47:17.511825",
+  "current_scenario": "optimistic",
   "scenarios": {
     "realistic": {
       "name": "Realistic",
