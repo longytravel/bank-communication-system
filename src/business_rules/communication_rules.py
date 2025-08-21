@@ -27,44 +27,70 @@ class CommunicationRules:
         return result
     
     def _apply_regulatory_rules(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Rules for regulatory communications - MANDATORY compliance."""
+        """Rules for regulatory communications - DURABLE MEDIUM compliance."""
         self.logger.info("Applying regulatory communication rules")
         
         timeline = result.get("comms_plan", {}).get("timeline", [])
+        customer_category = result.get("customer_category", {}).get("label", "")
         
-        # MANDATORY: Ensure postal delivery for regulatory compliance
-        has_letter = any(str(step.get("channel", "")).lower() == "letter" for step in timeline)
+        # Define durable medium channels based on customer type
+        if customer_category == "Digital-first self-serve":
+            # For digital customers, email IS a durable medium
+            durable_channels = ["email", "in_app", "letter"]
+            preferred_durable = "email"  # Prefer email over letter
+        elif customer_category == "Assisted-digital":
+            # For assisted-digital, email can also be durable medium
+            durable_channels = ["email", "letter"]
+            preferred_durable = "email"
+        else:
+            # For traditional/vulnerable customers, stick with letter
+            durable_channels = ["letter"]
+            preferred_durable = "letter"
         
-        if not has_letter:
-            # Insert postal delivery as first step
+        # Check if we have at least one durable medium
+        has_durable = any(
+            str(step.get("channel", "")).lower() in durable_channels 
+            for step in timeline
+        )
+        
+        if not has_durable:
+            # Insert the preferred durable medium
             timeline.insert(0, {
                 "step": 1,
-                "channel": "letter",
+                "channel": preferred_durable,
                 "when": "immediate",
-                "purpose": "⚠️ REGULATORY REQUIREMENT - Mandatory postal confirmation",
-                "why": "Legal requirement for regulatory communications",
-                "compliance_note": "Required by banking regulations"
+                "purpose": f"✅ REGULATORY COMPLIANCE - Durable medium via {preferred_durable}",
+                "why": f"Regulatory requirement met via {preferred_durable}",
+                "compliance_note": f"FCA durable medium requirement satisfied via {preferred_durable}"
             })
             
             # Renumber other steps
             for i, step in enumerate(timeline[1:], start=2):
                 step["step"] = i
         
-        # Add regulatory compliance override notice
+        # Add regulatory compliance notice
         if "comms_plan" not in result:
             result["comms_plan"] = {}
         if "overrides_or_risks" not in result["comms_plan"]:
             result["comms_plan"]["overrides_or_risks"] = []
         
-        result["comms_plan"]["overrides_or_risks"].insert(0,
-            "⚠️ REGULATORY OVERRIDE: Physical letter delivery mandated by law")
+        # Update message to reflect new approach
+        compliance_msg = f"✅ REGULATORY COMPLIANCE: Durable medium requirement met via {preferred_durable}"
+        result["comms_plan"]["overrides_or_risks"].insert(0, compliance_msg)
+        
+        # Add cost savings note for digital customers
+        if customer_category in ["Digital-first self-serve", "Assisted-digital"] and preferred_durable == "email":
+            result["comms_plan"]["overrides_or_risks"].append(
+                "💰 COST OPTIMIZATION: Using email as durable medium for digital-savvy customer (£1.46 saved per communication)")
         
         # Ensure formal tone in all communications
         self._ensure_formal_tone(result)
         
         # Add compliance tracking
         result["compliance_applied"] = True
-        result["regulatory_channels"] = ["letter"]
+        result["regulatory_channels"] = [preferred_durable]
+        result["durable_medium_used"] = preferred_durable
+        result["cost_optimized"] = preferred_durable != "letter"
         
         result["comms_plan"]["timeline"] = timeline
         return result

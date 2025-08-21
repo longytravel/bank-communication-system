@@ -119,21 +119,33 @@ class BusinessRulesEngine:
         return result
     
     def _ensure_regulatory_compliance(self, result: Dict[str, Any]) -> Dict[str, Any]:
-        """Ensure regulatory messages have proper delivery channels."""
+        """Ensure regulatory messages have proper durable medium delivery."""
         self.applied_rules.append("REGULATORY_COMPLIANCE_OVERRIDE")
         
         timeline = result.get("comms_plan", {}).get("timeline", [])
+        customer_category = result.get("customer_category", {}).get("label", "")
         
-        # Ensure postal delivery exists
-        has_letter = any(str(step.get("channel", "")).lower() == "letter" for step in timeline)
+        # Determine required durable medium based on customer type
+        if customer_category in ["Digital-first self-serve", "Assisted-digital"]:
+            durable_channels = ["email", "in_app", "letter"]
+            preferred_channel = "email"
+        else:
+            durable_channels = ["letter"]
+            preferred_channel = "letter"
         
-        if not has_letter:
+        # Ensure durable medium exists
+        has_durable = any(
+            str(step.get("channel", "")).lower() in durable_channels 
+            for step in timeline
+        )
+        
+        if not has_durable:
             timeline.insert(0, {
                 "step": 1,
-                "channel": "letter",
+                "channel": preferred_channel,
                 "when": "immediate", 
-                "purpose": "⚠️ REGULATORY REQUIREMENT - Mandatory postal confirmation",
-                "why": "Legal requirement for regulatory communications"
+                "purpose": f"✅ REGULATORY COMPLIANCE - Durable medium via {preferred_channel}",
+                "why": f"Legal requirement met via {preferred_channel}"
             })
             
             # Renumber remaining steps
@@ -147,7 +159,7 @@ class BusinessRulesEngine:
             result["comms_plan"]["overrides_or_risks"] = []
         
         result["comms_plan"]["overrides_or_risks"].insert(0,
-            "⚠️ REGULATORY OVERRIDE: Physical letter delivery mandated by law")
+            f"✅ REGULATORY COMPLIANCE: Durable medium requirement satisfied via {preferred_channel}")
         
         result["comms_plan"]["timeline"] = timeline
         return result
@@ -175,11 +187,11 @@ class BusinessRulesEngine:
     def get_rules_summary(self) -> Dict[str, str]:
         """Get summary of all rules for documentation."""
         return {
-            "Digital-first customers": "In-app only, voice notes added, no phone scripts",
-            "Assisted-digital customers": "Coaching calls offered for digital adoption",
-            "Low/no-digital customers": "Coaching calls + clear letters with QR codes",
-            "Vulnerable customers": "⚠️ ALL sales content removed, callback offers added",
-            "Accessibility needs": "Braille/audio formats ensured",
-            "Regulatory communications": "⚠️ Mandatory postal delivery enforced",
+            "Digital-first customers": "Email as durable medium for regulatory, voice notes added",
+            "Assisted-digital customers": "Email as durable medium, coaching calls offered",
+            "Low/no-digital customers": "Letters for regulatory, coaching calls offered",
+            "Vulnerable customers": "⚠️ Letters for regulatory, ALL sales content removed",
+            "Accessibility needs": "Letters for regulatory, braille/audio formats ensured",
+            "Regulatory communications": "✅ Email for digital customers, letters for traditional",
             "Upsell eligible": "Enhanced upsell materials generated"
         }
