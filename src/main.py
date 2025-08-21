@@ -624,33 +624,89 @@ def show_data_template():
     """)
 
 def run_customer_analysis(customer_data, batch_size):
-    """Run the AI customer analysis."""
-    try:
-        api_manager = APIManager()
-    except Exception as e:
-        st.error(f"Failed to initialize APIs: {str(e)}")
+    """Run the AI customer analysis with better error handling."""
+    
+    # Check configuration first
+    if not is_configured():
+        st.error("❌ API keys not configured. Please set them in Streamlit Cloud Secrets.")
+        st.info("Add ANTHROPIC_API_KEY and OPENAI_API_KEY in your app settings → Secrets")
         return
     
-    # Progress indicator
-    with st.spinner("Analyzing customers with AI..."):
-        customers_list = customer_data.to_dict('records')
+    try:
+        api_manager = APIManager()
         
+        # Test API connection first
+        with st.spinner("Testing API connection..."):
+            api_status = api_manager.get_api_status()
+            
+            if api_status.get('claude', {}).get('status') != 'connected':
+                st.error(f"❌ Claude API not connected: {api_status.get('claude', {}).get('error', 'Unknown error')}")
+                return
+            
+            if api_status.get('openai', {}).get('status') != 'connected':
+                st.warning(f"⚠️ OpenAI API not connected: {api_status.get('openai', {}).get('error', 'Unknown error')}")
+        
+        st.success("✅ API connection successful")
+        
+    except Exception as e:
+        st.error(f"❌ Failed to initialize APIs: {str(e)}")
+        st.info("Check that your API keys are correctly set in Streamlit Cloud Secrets")
+        return
+    
+    # Progress indicator with more detail
+    progress_bar = st.progress(0)
+    status_text = st.empty()
+    
+    try:
+        customers_list = customer_data.to_dict('records')
+        total_customers = len(customers_list)
+        
+        status_text.text(f"Analyzing {total_customers} customers in batches of {batch_size}...")
+        
+        # Run the analysis with timeout handling
         try:
-            # Run the analysis
             analysis_results = api_manager.analyze_customer_base(
                 customers_list, 
                 batch_size=batch_size
             )
             
+            progress_bar.progress(1.0)
+            
             if analysis_results:
                 st.session_state.analysis_results = analysis_results
-                st.success(f"Successfully analyzed {len(analysis_results.get('customer_categories', []))} customers")
+                st.success(f"✅ Successfully analyzed {len(analysis_results.get('customer_categories', []))} customers")
+                
+                # Show a preview of results
+                if analysis_results.get('customer_categories'):
+                    st.info(f"Found {len(analysis_results['customer_categories'])} customer profiles")
+                    st.info(f"Categories: {analysis_results.get('aggregates', {}).get('categories', {})}")
+                
+                time.sleep(2)
                 st.rerun()
             else:
-                st.error("Analysis failed. Please check your API configuration.")
+                st.error("❌ Analysis returned no results. The API call may have failed.")
+                st.info("Try reducing the batch size or number of customers")
                 
-        except Exception as e:
-            st.error(f"Analysis error: {str(e)}")
+        except Exception as analysis_error:
+            st.error(f"❌ Analysis failed: {str(analysis_error)}")
+            
+            # More specific error messages
+            if "timeout" in str(analysis_error).lower():
+                st.info("The request timed out. Try analyzing fewer customers or reducing batch size.")
+            elif "rate" in str(analysis_error).lower():
+                st.info("Rate limit hit. Try reducing batch size to 3 or less.")
+            elif "key" in str(analysis_error).lower():
+                st.info("API key issue. Check your Streamlit Cloud Secrets.")
+            else:
+                st.info("Try: 1) Reducing batch size to 3, 2) Analyzing only 5-10 customers first")
+                
+    except Exception as e:
+        st.error(f"❌ Unexpected error: {str(e)}")
+        st.info("Full error details:")
+        st.exception(e)
+    finally:
+        progress_bar.empty()
+        status_text.empty()
 
 # ============================================================================
 # MAIN APPLICATION
