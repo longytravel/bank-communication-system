@@ -25,3 +25,9 @@ def get_batch_ui_renderer():
     """Get the batch UI renderer function when needed."""
     from .batch_ui import render_batch_communication_processing
     return render_batch_communication_processing
+
+# Add the same pattern for customer plans UI
+def get_customer_plans_ui_renderer():
+    """Get the customer plans UI renderer function when needed."""
+    from .customer_plans_ui import render_customer_communication_plans_page
+    return render_customer_communication_plans_page
