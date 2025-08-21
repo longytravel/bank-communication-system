@@ -350,12 +350,23 @@ def render_data_upload_tab():
             st.session_state.customer_data = None
             st.session_state.analysis_results = None
             st.info("Data cleared")
-    
-    # Handle uploaded file
+
+# Handle uploaded file
     if uploaded_file is not None:
-        st.session_state.customer_data = process_uploaded_file(uploaded_file)
-        st.session_state.analysis_results = None
+    # Add debug message
+        st.info(f"📄 Processing file: {uploaded_file.name}")
     
+    # Process the file
+    processed_data = process_uploaded_file(uploaded_file)
+    
+    # Only show messages if we actually tried to process something
+    if processed_data is not None and len(processed_data) > 0:
+        st.session_state.customer_data = processed_data
+        st.session_state.analysis_results = None
+        st.success(f"✅ Successfully loaded {len(processed_data)} customers from {uploaded_file.name}")
+    elif uploaded_file is not None:  # Only show error if there was a file
+        st.error("❌ Failed to process the uploaded file - check file format")
+        
     # Show data preview if loaded
     if st.session_state.customer_data is not None:
         df = st.session_state.customer_data
@@ -603,6 +614,10 @@ def load_sample_data():
 
 def process_uploaded_file(uploaded_file):
     """Process the uploaded customer data file."""
+    # Check if uploaded_file is None first
+    if uploaded_file is None:
+        return None
+        
     try:
         if uploaded_file.name.endswith('.csv'):
             df = pd.read_csv(uploaded_file)
@@ -673,16 +688,28 @@ def run_customer_analysis(customer_data, batch_size):
             progress_bar.progress(1.0)
             
             if analysis_results:
+    # Force save to session state
                 st.session_state.analysis_results = analysis_results
-                st.success(f"✅ Successfully analyzed {len(analysis_results.get('customer_categories', []))} customers")
-                
+                st.session_state.analysis_timestamp = datetime.now()  # Add timestamp
+    
+    # Show what we got
+                num_cats = len(analysis_results.get('customer_categories', []))
+                st.success(f"✅ Successfully analyzed {num_cats} customers")
+    
+    # Debug: show what's in the results
+    #            st.write("Debug - Results structure:")
+    #            st.write(f"- customer_categories: {num_cats} items")
+    #            st.write(f"- aggregates: {bool(analysis_results.get('aggregates'))}")
+    #          st.write(f"- Keys in results: {list(analysis_results.keys())}")
+            
+                           
                 # Show a preview of results
                 if analysis_results.get('customer_categories'):
                     st.info(f"Found {len(analysis_results['customer_categories'])} customer profiles")
                     st.info(f"Categories: {analysis_results.get('aggregates', {}).get('categories', {})}")
                 
                 time.sleep(2)
-                st.rerun()
+            #    st.rerun()
             else:
                 st.error("❌ Analysis returned no results. The API call may have failed.")
                 st.info("Try reducing the batch size or number of customers")
