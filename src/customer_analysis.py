@@ -17,6 +17,7 @@ import sys
 sys.path.insert(0, str(Path(__file__).parent))
 
 from api.api_manager import APIManager
+from ui.professional_theme import create_metric_card, create_professional_card
 from business_rules.engine import BusinessRulesEngine
 
 class CustomerAnalysisModule:
@@ -206,7 +207,7 @@ class CustomerAnalysisModule:
         
         st.markdown("""
         <div class="modern-card primary">
-            <h3 style="margin-top: 0; color: white;">🔄 AI Analysis in Progress</h3>
+            <h3 style="margin-top: 0; color: white;"> AI Analysis in Progress</h3>
             <p style="color: rgba(255,255,255,0.9); margin-bottom: 0;">
                 Claude is analyzing your customer data. This may take 30-60 seconds...
             </p>
@@ -222,7 +223,7 @@ class CustomerAnalysisModule:
         total_customers = len(customers_list)
         
         try:
-            status_text.text(f"🤖 Sending {total_customers} customers to Claude for analysis...")
+            status_text.text(f" Sending {total_customers} customers to Claude for analysis...")
             progress_bar.progress(0.1)
             
             # Run the analysis
@@ -346,7 +347,7 @@ class CustomerAnalysisModule:
             # Create modern donut chart
             labels = list(categories.keys())
             values = list(categories.values())
-            colors = ['#00A86B', '#20B562', '#4CAF50', '#66BB6A', '#81C784']
+            colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
             
             fig = go.Figure(data=[go.Pie(
                 labels=labels,
@@ -354,17 +355,17 @@ class CustomerAnalysisModule:
                 hole=0.5,
                 marker_colors=colors[:len(labels)],
                 textinfo='label+percent+value',
-                textfont=dict(size=12, family="Inter"),
+                textfont=dict(size=12, family="IBM Plex Sans"),
                 hovertemplate='<b>%{label}</b><br>Customers: %{value}<br>Percentage: %{percent}<extra></extra>',
                 marker=dict(line=dict(color='white', width=2))
             )])
             
             fig.update_layout(
-                font=dict(family="Inter", size=12),
+                font=dict(family="IBM Plex Sans", size=12),
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
                 margin=dict(t=0, b=0, l=0, r=0),
-                height=400,
+                height=350,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)'
             )
@@ -416,7 +417,7 @@ class CustomerAnalysisModule:
             
             # Detailed customer cards
             with st.expander("🔍 Detailed Customer Analysis"):
-                for customer in customer_categories[:5]:  # Show first 5 customers
+                for customer in customer_categories:  # Show all customers
                     self.render_customer_card(customer)
     
     def render_customer_card(self, customer):

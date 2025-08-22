@@ -44,6 +44,7 @@ def get_batch_processing_ui():
 
 # Import file handlers module
 from file_handlers.letter_scanner import render_enhanced_letter_management
+from customer_analysis import render_customer_analysis_page as render_customer_analysis_module
 
 # ============================================================================
 # PROFESSIONAL COMPONENTS
@@ -288,7 +289,7 @@ def render_recent_activity():
 # CUSTOMER ANALYSIS PAGE (Professional Version)
 # ============================================================================
 
-def render_customer_analysis_page():
+def render_customer_analysis_page_OLD():
     """Render professional customer analysis page."""
     
     st.markdown(create_professional_card(
@@ -762,7 +763,7 @@ def main():
         render_executive_dashboard()
     
     elif selected_page == "Customer Analysis":
-        render_customer_analysis_page()
+        render_customer_analysis_module()
     
     elif selected_page == "Letter Management":
         from file_handlers.letter_scanner import render_enhanced_letter_management
