@@ -937,133 +937,187 @@ def render_customer_summary_table(all_plans: List[Dict]):
        st.metric("Protected Customers", f"{vulnerable}/{len(all_plans)}")
 
 def render_individual_customer_details(all_plans: List[Dict]):
-   """Render detailed view for each customer with full content."""
-   
-   # Customer selector
-   customer_names = [f"{plan['customer_name']} ({plan['customer_category']})" for plan in all_plans]
-   
-   selected_index = st.selectbox(
-       "Select customer to view full communication details:",
-       range(len(customer_names)),
-       format_func=lambda x: customer_names[x]
-   )
-   
-   selected_plan = all_plans[selected_index]
-   
-   # Display customer header
-   st.markdown(f"""
-   <div style="background: #F8FAFC; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
-       <h4 style="margin-top: 0;">{selected_plan['customer_name']}</h4>
-       <p style="margin-bottom: 0.5rem;"><strong>Category:</strong> {selected_plan['customer_category']}</p>
-       <p style="margin-bottom: 0.5rem;"><strong>Communication Type:</strong> {selected_plan['classification_type']}</p>
-       <p style="margin-bottom: 0;"><strong>Cost Savings:</strong> £{selected_plan['costs']['savings']:.3f} ({selected_plan['costs']['savings_percentage']:.1f}%)</p>
-   </div>
-   """, unsafe_allow_html=True)
-   
-   # Display content for each channel
-   content = selected_plan['content']
-   
-   # In-App Notification
-   if 'in_app' in selected_plan['channels'] and 'in_app' in content:
-       with st.expander("📱 In-App Notification", expanded=True):
-           in_app = content['in_app']
-           
-           col1, col2 = st.columns([1, 2])
-           
-           with col1:
-               st.markdown("**Push Notification:**")
-               st.markdown(f"""
-               <div style="background: #000; color: white; border-radius: 12px; padding: 1rem; margin: 0.5rem 0;">
-                   <div style="font-size: 0.8rem; opacity: 0.8;">{in_app.get('push_title', 'Resonance Bank')}</div>
-                   <div style="margin-top: 0.5rem;">{in_app.get('push_body', 'Notification')}</div>
-               </div>
-               """, unsafe_allow_html=True)
-           
-           with col2:
-               st.markdown("**In-App Message:**")
-               st.markdown(f"**Subject:** {in_app.get('message_subject', 'Message')}")
-               st.text_area("Message Body:", in_app.get('message_body', ''), height=150, disabled=True, key=f"in_app_{selected_index}")
-               
-               col_a, col_b = st.columns(2)
-               with col_a:
-                   st.button(in_app.get('cta_primary', 'Action'), disabled=True, key=f"cta1_{selected_index}")
-               with col_b:
-                   st.button(in_app.get('cta_secondary', 'Later'), disabled=True, key=f"cta2_{selected_index}")
-           
-           # Cost info
-           in_app_cost = selected_plan['costs']['channels'].get('in_app', {}).get('cost', 0.001)
-           st.info(f"💰 Cost: £{in_app_cost:.4f} | ⚡ Delivery: Instant | 📊 Open Rate: 85-90%")
-   
-   # Email
-   if 'email' in selected_plan['channels'] and 'email' in content:
-       with st.expander("📧 Email"):
-           email = content['email']
-           
-           st.markdown(f"**Subject:** {email.get('subject', 'Email Subject')}")
-           st.markdown(f"**Preview:** {email.get('preview', 'Email preview text')}")
-           st.text_area("Email Body:", email.get('body', ''), height=200, disabled=True, key=f"email_{selected_index}")
-           
-           email_cost = selected_plan['costs']['channels'].get('email', {}).get('cost', 0.002)
-           st.info(f"💰 Cost: £{email_cost:.4f} | ⚡ Delivery: Instant | 📊 Open Rate: 25-30%")
-   
-   # SMS
-   if 'sms' in selected_plan['channels'] and 'sms' in content:
-       with st.expander("💬 SMS"):
-           sms = content['sms']
-           sms_text = sms.get('text', 'SMS message')
-           
-           st.markdown(f"""
-           <div style="background: #E8F5E9; border-radius: 8px; padding: 1rem; margin: 0.5rem 0;">
-               <div style="font-size: 0.9rem; color: #2E7D32;">{sms_text}</div>
-               <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
-                   Characters: {len(sms_text)}/160 | Segments: {(len(sms_text)-1)//160 + 1}
-               </div>
-           </div>
-           """, unsafe_allow_html=True)
-           
-           sms_cost = selected_plan['costs']['channels'].get('sms', {}).get('cost', 0.05)
-           st.info(f"💰 Cost: £{sms_cost:.3f} | ⚡ Delivery: Instant | 📊 Open Rate: 95%")
-   
-   # Letter
-   if 'letter' in selected_plan['channels'] and 'letter' in content:
-       with st.expander("📮 Letter"):
-           letter = content['letter']
-           
-           st.markdown(f"**Greeting:** {letter.get('greeting', 'Dear Customer')}")
-           st.text_area("Letter Body:", letter.get('body', ''), height=200, disabled=True, key=f"letter_{selected_index}")
-           st.markdown(f"**Closing:** {letter.get('closing', 'Yours sincerely')}")
-           
-           letter_cost = selected_plan['costs']['channels'].get('letter', {}).get('cost', 1.46)
-           st.info(f"💰 Cost: £{letter_cost:.2f} | 📮 Delivery: 2-3 days | 📊 Open Rate: 65%")
-   
-   # Voice Note
-   if 'voice_note' in selected_plan['channels'] and 'voice_note' in content:
-       with st.expander("🔊 Voice Note"):
-           voice = content['voice_note']
-           
-           st.markdown("**Script:**")
-           st.text_area("Voice Script:", voice.get('script', ''), height=100, disabled=True, key=f"voice_{selected_index}")
-           
-           # Placeholder for audio player
-           st.markdown("""
-           <div style="background: #F3F4F6; border-radius: 8px; padding: 1rem; text-align: center;">
-               🔊 Audio player will appear here when voice generation is enabled
-           </div>
-           """, unsafe_allow_html=True)
-           
-           voice_cost = selected_plan['costs']['channels'].get('voice_note', {}).get('cost', 0.02)
-           st.info(f"💰 Cost: £{voice_cost:.3f} | ⚡ Generation: 2-3 seconds | 📊 Listen Rate: 70%")
-   
-   # Upsell message
-   if selected_plan['upsell_eligible'] and content.get('upsell_message'):
-       with st.expander("💎 Upsell Opportunity"):
-           st.success(content['upsell_message'])
-   
-   # Personalization notes
-   if 'personalization_notes' in content:
-       with st.expander("🎯 Personalization Applied"):
-           for note in content['personalization_notes']:
-               st.markdown(f"• {note}")
+    """Render detailed view for each customer with full content."""
+    
+    # Customer selector
+    customer_names = [f"{plan['customer_name']} ({plan['customer_category']})" for plan in all_plans]
+    
+    selected_index = st.selectbox(
+        "Select customer to view full communication details:",
+        range(len(customer_names)),
+        format_func=lambda x: customer_names[x]
+    )
+    
+    selected_plan = all_plans[selected_index]
+    
+    # Display customer header
+    st.markdown(f"""
+    <div style="background: #F8FAFC; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="margin-top: 0;">{selected_plan['customer_name']}</h4>
+        <p style="margin-bottom: 0.5rem;"><strong>Category:</strong> {selected_plan['customer_category']}</p>
+        <p style="margin-bottom: 0.5rem;"><strong>Communication Type:</strong> {selected_plan['classification_type']}</p>
+        <p style="margin-bottom: 0;"><strong>Cost Savings:</strong> £{selected_plan['costs']['savings']:.3f} ({selected_plan['costs']['savings_percentage']:.1f}%)</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Display content for each channel
+    content = selected_plan['content']
+    
+    # In-App Notification
+    if 'in_app' in selected_plan['channels'] and 'in_app' in content:
+        with st.expander("📱 In-App Notification", expanded=True):
+            in_app = content['in_app']
+            
+            col1, col2 = st.columns([1, 2])
+            
+            with col1:
+                st.markdown("**Push Notification:**")
+                st.markdown(f"""
+                <div style="background: #000; color: white; border-radius: 12px; padding: 1rem; margin: 0.5rem 0;">
+                    <div style="font-size: 0.8rem; opacity: 0.8;">{in_app.get('push_title', 'Resonance Bank')}</div>
+                    <div style="margin-top: 0.5rem;">{in_app.get('push_body', 'Notification')}</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            with col2:
+                st.markdown("**In-App Message:**")
+                st.markdown(f"**Subject:** {in_app.get('message_subject', 'Message')}")
+                st.text_area("Message Body:", in_app.get('message_body', ''), height=150, disabled=True, key=f"in_app_{selected_index}")
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    st.button(in_app.get('cta_primary', 'Action'), disabled=True, key=f"cta1_{selected_index}")
+                with col_b:
+                    st.button(in_app.get('cta_secondary', 'Later'), disabled=True, key=f"cta2_{selected_index}")
+            
+            # Cost info
+            in_app_cost = selected_plan['costs']['channels'].get('in_app', {}).get('cost', 0.001)
+            st.info(f"💰 Cost: £{in_app_cost:.4f} | ⚡ Delivery: Instant | 📊 Open Rate: 85-90%")
+    
+    # Email
+    if 'email' in selected_plan['channels'] and 'email' in content:
+        with st.expander("📧 Email"):
+            email = content['email']
+            
+            st.markdown(f"**Subject:** {email.get('subject', 'Email Subject')}")
+            st.markdown(f"**Preview:** {email.get('preview', 'Email preview text')}")
+            st.text_area("Email Body:", email.get('body', ''), height=200, disabled=True, key=f"email_{selected_index}")
+            
+            email_cost = selected_plan['costs']['channels'].get('email', {}).get('cost', 0.002)
+            st.info(f"💰 Cost: £{email_cost:.4f} | ⚡ Delivery: Instant | 📊 Open Rate: 25-30%")
+    
+    # SMS
+    if 'sms' in selected_plan['channels'] and 'sms' in content:
+        with st.expander("💬 SMS"):
+            sms = content['sms']
+            sms_text = sms.get('text', 'SMS message')
+            
+            st.markdown(f"""
+            <div style="background: #E8F5E9; border-radius: 8px; padding: 1rem; margin: 0.5rem 0;">
+                <div style="font-size: 0.9rem; color: #2E7D32;">{sms_text}</div>
+                <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">
+                    Characters: {len(sms_text)}/160 | Segments: {(len(sms_text)-1)//160 + 1}
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+            sms_cost = selected_plan['costs']['channels'].get('sms', {}).get('cost', 0.05)
+            st.info(f"💰 Cost: £{sms_cost:.3f} | ⚡ Delivery: Instant | 📊 Open Rate: 95%")
+    
+    # Letter
+    if 'letter' in selected_plan['channels'] and 'letter' in content:
+        with st.expander("📮 Letter"):
+            letter = content['letter']
+            
+            st.markdown(f"**Greeting:** {letter.get('greeting', 'Dear Customer')}")
+            st.text_area("Letter Body:", letter.get('body', ''), height=200, disabled=True, key=f"letter_{selected_index}")
+            st.markdown(f"**Closing:** {letter.get('closing', 'Yours sincerely')}")
+            
+            letter_cost = selected_plan['costs']['channels'].get('letter', {}).get('cost', 1.46)
+            st.info(f"💰 Cost: £{letter_cost:.2f} | 📮 Delivery: 2-3 days | 📊 Open Rate: 65%")
+    
+    # Voice Note
+    if 'voice_note' in selected_plan['channels'] and 'voice_note' in content:
+        with st.expander("🔊 Voice Note"):
+            voice = content['voice_note']
+            
+            st.markdown("**Script:**")
+            st.text_area("Voice Script:", voice.get('script', ''), height=100, disabled=True, key=f"voice_{selected_index}")
+            
+            # Check if voice file exists
+            customer_id = selected_plan.get('customer_id', 'unknown')
+            voice_notes_dir = Path("data/voice_notes")
+            
+            # Look for voice file for this customer
+            voice_file = None
+            if voice_notes_dir.exists():
+                # Find any mp3 file starting with this customer ID
+                for file in voice_notes_dir.glob(f"{customer_id}*.mp3"):
+                    voice_file = file
+                    break
+            
+            if voice_file and voice_file.exists():
+                # Display audio player
+                st.markdown("**🎧 Listen to Voice Note:**")
+                
+                # Read the audio file
+                with open(voice_file, 'rb') as audio_file:
+                    audio_bytes = audio_file.read()
+                    st.audio(audio_bytes, format='audio/mp3')
+                
+                st.success(f"✅ Voice note generated: {voice_file.name}")
+                
+                # Show file info
+                file_size_kb = voice_file.stat().st_size / 1024
+                st.info(f"📊 File size: {file_size_kb:.1f} KB | Format: MP3")
+            else:
+                # Generate voice note button
+                st.warning("⚠️ Voice note not yet generated")
+                
+                if st.button(f"🎤 Generate Voice Note Now", key=f"gen_voice_{selected_index}"):
+                    with st.spinner("Generating voice note..."):
+                        try:
+                            # Initialize API manager if needed
+                            from api.api_manager import APIManager
+                            api_manager = APIManager()
+                            
+                            # Generate voice note
+                            voice_text = voice.get('script', '')
+                            if not voice_text:
+                                voice_text = content.get('in_app', {}).get('message_body', '')
+                            if not voice_text:
+                                voice_text = content.get('sms', {}).get('text', '')
+                            
+                            if voice_text:
+                                voice_path = api_manager.openai.generate_voice_note(
+                                    voice_text, 
+                                    customer_id, 
+                                    "communication"
+                                )
+                                
+                                if voice_path and voice_path.exists():
+                                    st.success("✅ Voice note generated successfully!")
+                                    st.rerun()
+                                else:
+                                    st.error("Failed to generate voice note")
+                            else:
+                                st.error("No text available for voice generation")
+                        except Exception as e:
+                            st.error(f"Error generating voice note: {str(e)}")
+            
+            voice_cost = selected_plan['costs']['channels'].get('voice_note', {}).get('cost', 0.02)
+            st.info(f"💰 Cost: £{voice_cost:.3f} | ⚡ Generation: 2-3 seconds | 📊 Listen Rate: 70%")
+    
+    # Upsell message
+    if selected_plan['upsell_eligible'] and content.get('upsell_message'):
+        with st.expander("💎 Upsell Opportunity"):
+            st.success(content['upsell_message'])
+    
+    # Personalization notes
+    if 'personalization_notes' in content:
+        with st.expander("🎯 Personalization Applied"):
+            for note in content['personalization_notes']:
+                st.markdown(f"• {note}")
 
 def render_export_section(all_plans: List[Dict]):
    """Render export options for all results."""
