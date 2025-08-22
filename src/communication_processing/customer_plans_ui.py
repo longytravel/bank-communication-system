@@ -590,14 +590,15 @@ def get_channels_for_category(category: str, classification_type: str) -> List[s
     """Determine appropriate channels based on customer category and letter type."""
     
     if classification_type == "REGULATORY":
-        # Regulatory requires letter for all
-        base_channels = ["letter", "email"]
+        # Regulatory uses appropriate durable medium based on customer type
         if category == "Digital-first self-serve":
-            return ["in_app", "email", "letter"]
-        elif category == "Vulnerable / extra-support":
-            return ["letter", "email"]
+            return ["email", "in_app"]  # Email is durable medium for digital
+        elif category == "Assisted-digital":
+            return ["email", "sms"]  # Email is durable medium for assisted
+        elif category in ["Vulnerable / extra-support", "Low/no-digital (offline-preferred)"]:
+            return ["letter", "email"]  # Letter for traditional/vulnerable
         else:
-            return base_channels
+            return ["letter", "email"]  # Default to letter for unknown
     
     # Non-regulatory communications
     if category == "Digital-first self-serve":
@@ -616,80 +617,169 @@ def get_channels_for_category(category: str, classification_type: str) -> List[s
 def generate_template_content(name: str, category: str, classification_type: str, upsell_eligible: bool) -> Dict:
     """Generate template-based content for demo purposes."""
     
-    templates = {
-        "Digital-first self-serve": {
-            "in_app": {
-                "push_title": "Resonance Bank",
-                "push_body": f"Hi {name}! Important update - tap to view",
-                "message_subject": f"Your Account Update",
-                "message_body": f"Hi {name}, we have an important update about your account. As a digital-first customer, you can review and action this directly in the app. This update is related to {classification_type.lower()} requirements and takes just 2 minutes to review.",
-                "cta_primary": "Review Now",
-                "cta_secondary": "Remind Me Later"
-            },
-            "email": {
-                "subject": f"Action required: {classification_type.lower()} update for your account",
-                "preview": f"Hi {name}, important account update requiring your attention",
-                "body": f"Dear {name},\n\nWe're writing to inform you about an important {classification_type.lower()} update to your account. As someone who regularly uses our digital services, you'll appreciate the convenience of handling this through our app..."
-            },
-            "sms": {
-                "text": f"Hi {name}! {classification_type} update in your Resonance app. Review now to stay compliant. Help? Call 0800123456"
-            },
-            "voice_note": {
-                "script": f"Hi {name}, this is a quick reminder about the {classification_type.lower()} update waiting in your app. It only takes 2 minutes to review."
+    # Special handling for REGULATORY communications
+    if classification_type == "REGULATORY":
+        if category == "Digital-first self-serve":
+            # Digital customers get email as durable medium
+            templates = {
+                "email": {
+                    "subject": f"Important Regulatory Notice - Action Required",
+                    "preview": f"Hi {name}, important regulatory update for your account",
+                    "body": f"Dear {name},\n\nThis email serves as official regulatory notification regarding your account. As a digital-first customer, you're receiving this via email which serves as a durable medium for regulatory compliance.\n\nIMPORTANT: This regulatory update requires your attention...\n\nThis email fulfills our regulatory obligation to provide you with this information in a durable medium."
+                },
+                "in_app": {
+                    "push_title": "Resonance Bank",
+                    "push_body": f"Regulatory notice available - tap to view",
+                    "message_subject": f"Regulatory Update",
+                    "message_body": f"Hi {name}, an important regulatory notice is available. Check your email for the official communication which serves as the durable medium for this regulatory requirement.",
+                    "cta_primary": "View Details",
+                    "cta_secondary": "Acknowledge"
+                }
             }
-        },
-        "Vulnerable / extra-support": {
-            "letter": {
-                "greeting": f"Dear {name}",
-                "body": f"We are writing to inform you about an important matter regarding your account. We understand you may need additional support with this {classification_type.lower()} update. Please don't hesitate to call us on our dedicated support line where our team is ready to help you through this process step by step.",
-                "closing": "Yours sincerely"
-            },
-            "email": {
-                "subject": f"Important information for you, {name}",
-                "preview": "We're here to help with your account update",
-                "body": f"Dear {name},\n\nWe have some important information to share with you. We understand you may prefer to speak with someone about this, so please feel free to call us..."
+        elif category == "Assisted-digital":
+            # Assisted-digital also gets email as durable medium
+            templates = {
+                "email": {
+                    "subject": f"Important Regulatory Notice for Your Account",
+                    "preview": f"Dear {name}, regulatory information enclosed",
+                    "body": f"Dear {name},\n\nWe're sending you this important regulatory information via email, which serves as an official durable medium.\n\nRegulatory details...\n\nIf you need help understanding this information, please call us."
+                },
+                "sms": {
+                    "text": f"Hi {name}, we've sent important regulatory info to your email. Call us if you need help. Resonance Bank"
+                }
             }
-        },
-        "Low/no-digital (offline-preferred)": {
-            "letter": {
-                "greeting": f"Dear {name}",
-                "body": f"We are writing to inform you about an important {classification_type.lower()} update to your account. Full details are provided in this letter. If you have any questions, please visit your local branch or call us.",
-                "closing": "Yours sincerely"
-            },
-            "email": {
-                "subject": f"Important letter sent to you, {name}",
-                "preview": "We've sent you important information by post",
-                "body": f"Dear {name},\n\nWe have sent you an important letter regarding your account. Please check your post for full details..."
+        else:
+            # Vulnerable/Traditional customers get letters for regulatory
+            templates = {
+                "letter": {
+                    "greeting": f"Dear {name}",
+                    "body": f"We are writing to inform you about an important regulatory matter regarding your account.\n\nThis letter serves as the official durable medium for this regulatory communication as required by FCA regulations.\n\nRegulatory details...",
+                    "closing": "Yours sincerely"
+                },
+                "email": {
+                    "subject": f"Copy of regulatory letter sent to you",
+                    "preview": f"For your records - regulatory letter posted",
+                    "body": f"Dear {name},\n\nWe have sent you an important regulatory letter by post. This email is for your information only - the official communication is the letter."
+                }
             }
-        }
-    }
-    
-    # Get template for category, or use default
-    if category in templates:
-        content = templates[category]
     else:
-        content = {
-            "email": {
-                "subject": f"Account update for {name}",
-                "preview": "Important account information",
-                "body": f"Dear {name},\n\nWe have an important update regarding your account..."
+        # NON-REGULATORY communications (existing templates)
+        templates = {
+            "Digital-first self-serve": {
+                "in_app": {
+                    "push_title": "Resonance Bank",
+                    "push_body": f"Hi {name}! Important update - tap to view",
+                    "message_subject": f"Your Account Update",
+                    "message_body": f"Hi {name}, we have an important update about your account. As a digital-first customer, you can review and action this directly in the app. This update is related to {classification_type.lower()} and takes just 2 minutes to review.",
+                    "cta_primary": "Review Now",
+                    "cta_secondary": "Remind Me Later"
+                },
+                "email": {
+                    "subject": f"Update: {classification_type.lower()} information for your account",
+                    "preview": f"Hi {name}, account update for your review",
+                    "body": f"Dear {name},\n\nWe're writing with an important {classification_type.lower()} update. As someone who prefers digital channels, you can action this quickly through our app or online banking..."
+                },
+                "sms": {
+                    "text": f"Hi {name}! {classification_type} update in your Resonance app. Quick 2-min review needed. Help? Call 0800123456"
+                },
+                "voice_note": {
+                    "script": f"Hi {name}, this is a quick reminder about the {classification_type.lower()} update waiting in your app. It only takes 2 minutes to review."
+                }
             },
-            "sms": {
-                "text": f"Hi {name}, important account update. Please check your email or call us."
+            "Vulnerable / extra-support": {
+                "letter": {
+                    "greeting": f"Dear {name}",
+                    "body": f"We are writing to inform you about an important matter regarding your account. We understand you may need additional support with this {classification_type.lower()} update. Please don't hesitate to call us on our dedicated support line where our team is ready to help you through this process step by step.",
+                    "closing": "Yours sincerely"
+                },
+                "email": {
+                    "subject": f"Important information for you, {name}",
+                    "preview": "We're here to help with your account update",
+                    "body": f"Dear {name},\n\nWe have some important information to share with you. We understand you may prefer to speak with someone about this, so please feel free to call us..."
+                }
+            },
+            "Low/no-digital (offline-preferred)": {
+                "letter": {
+                    "greeting": f"Dear {name}",
+                    "body": f"We are writing to inform you about an important {classification_type.lower()} update to your account. Full details are provided in this letter. If you have any questions, please visit your local branch or call us.",
+                    "closing": "Yours sincerely"
+                },
+                "email": {
+                    "subject": f"Important letter sent to you, {name}",
+                    "preview": "We've sent you important information by post",
+                    "body": f"Dear {name},\n\nWe have sent you an important letter regarding your account. Please check your post for full details..."
+                }
+            },
+            "Assisted-digital": {
+                "email": {
+                    "subject": f"Account {classification_type.lower()} - support available",
+                    "preview": f"Hi {name}, we're here to help",
+                    "body": f"Dear {name},\n\nWe have an important {classification_type.lower()} update for you. We know you sometimes need help with digital services, so we're here to support you..."
+                },
+                "sms": {
+                    "text": f"Hi {name}, account update sent to your email. Need help? Call us on 0800123456 - we're here to support you."
+                },
+                "in_app": {
+                    "push_title": "Resonance Bank",
+                    "push_body": f"Account update - we can help",
+                    "message_subject": f"Your Update with Support",
+                    "message_body": f"Hi {name}, there's an update for your account. If you need any help understanding or actioning this, just tap 'Get Help' or call us.",
+                    "cta_primary": "View Update",
+                    "cta_secondary": "Get Help"
+                }
+            },
+            "Accessibility & alternate-format needs": {
+                "letter": {
+                    "greeting": f"Dear {name}",
+                    "body": f"Important {classification_type.lower()} information about your account. This letter is available in alternative formats including braille and audio. Please contact us to request your preferred format.",
+                    "closing": "Yours sincerely"
+                },
+                "email": {
+                    "subject": f"Accessible formats available - {classification_type.lower()} update",
+                    "preview": "Multiple format options for your convenience",
+                    "body": f"Dear {name},\n\nWe have important information for you. This is available in braille, large print, or audio format..."
+                },
+                "voice_note": {
+                    "script": f"Hello {name}, this is an audio version of your {classification_type.lower()} update. The full details are as follows..."
+                }
             }
         }
+        
+        # Get template for category, or use default
+        if category in templates:
+            content = templates[category]
+        else:
+            content = {
+                "email": {
+                    "subject": f"Account update for {name}",
+                    "preview": "Important account information",
+                    "body": f"Dear {name},\n\nWe have an important update regarding your account..."
+                },
+                "sms": {
+                    "text": f"Hi {name}, important account update. Please check your email or call us."
+                }
+            }
     
-    # Add upsell if eligible
+    # Add upsell if eligible (but NOT for regulatory)
     if upsell_eligible and classification_type != "REGULATORY":
         content["upsell_message"] = "Based on your account activity, you may benefit from our Premium Banking service."
     else:
         content["upsell_message"] = None
     
-    content["personalization_notes"] = [
+    # Add personalization notes
+    notes = [
         f"Used customer name: {name}",
         f"Tailored for {category} customer",
         f"Appropriate tone for {classification_type}"
     ]
+    
+    if classification_type == "REGULATORY":
+        if category in ["Digital-first self-serve", "Assisted-digital"]:
+            notes.append("✅ Using EMAIL as durable medium (saves £1.46 vs letter)")
+        else:
+            notes.append("📮 Using LETTER as durable medium for traditional/vulnerable customer")
+    
+    content["personalization_notes"] = notes
     
     return content
 
