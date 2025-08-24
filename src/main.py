@@ -62,15 +62,11 @@ def render_navigation_sidebar():
         </div>
         """, unsafe_allow_html=True)
         
-        # Navigation options with descriptions
+# Navigation options with descriptions
         nav_options = {
-            "Executive Dashboard": "System overview and key metrics",
             "Customer Analysis": "AI-powered customer segmentation",
             "Letter Management": "Document classification and management",
-            "Customer Communication Plans": "Personalized communication strategies with real AI content",
-            "Batch Processing": "Multi-customer communication workflows",
-            "Cost Management": "Communication cost optimization",
-            "System Configuration": "Settings and API configuration"
+            "Customer Communication Plans": "Personalized communication strategies with real AI content"
         }
         
         selected_page = st.selectbox(
@@ -126,162 +122,6 @@ def render_sidebar_status():
         <div style="margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 0.875rem; color: #0F172A;">{label}</span>
             {badge}
-        </div>
-        """, unsafe_allow_html=True)
-
-# ============================================================================
-# DASHBOARD PAGE
-# ============================================================================
-
-def render_executive_dashboard():
-    """Render the executive dashboard with professional metrics."""
-    
-    # Page header
-    st.markdown("""
-    <div class="pro-card">
-        <h1 style="font-size: 1.875rem; font-weight: 700; color: #0F172A; margin: 0;">
-            Executive Dashboard
-        </h1>
-        <p style="color: #64748B; margin-top: 0.5rem;">
-            Real-time overview of communication system performance and metrics
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Load data
-    customer_data = load_customer_data()
-    
-    if customer_data is not None:
-        # Calculate metrics
-        total_customers = len(customer_data)
-        avg_balance = customer_data['account_balance'].mean()
-        digital_users = len(customer_data[customer_data['prefers_digital'] == True])
-        digital_rate = (digital_users/total_customers)*100 if total_customers > 0 else 0
-        high_value = len(customer_data[customer_data['account_balance'] > 10000])
-        
-        # Key Performance Indicators
-        st.markdown("""
-        <h2 style="font-size: 1.125rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
-            Key Performance Indicators
-        </h2>
-        """, unsafe_allow_html=True)
-        
-        col1, col2, col3, col4 = st.columns(4)
-        
-        with col1:
-            st.markdown(create_metric_card(
-                "Total Customers",
-                f"{total_customers:,}",
-                "+2.4% vs last month",
-                "positive"
-            ), unsafe_allow_html=True)
-        
-        with col2:
-            st.markdown(create_metric_card(
-                "Average Balance",
-                f"£{avg_balance:,.0f}",
-                "+5.1% vs last month",
-                "positive"
-            ), unsafe_allow_html=True)
-        
-        with col3:
-            st.markdown(create_metric_card(
-                "Digital Adoption",
-                f"{digital_rate:.1f}%",
-                f"{digital_users:,} users",
-                "positive"
-            ), unsafe_allow_html=True)
-        
-        with col4:
-            st.markdown(create_metric_card(
-                "High Value Accounts",
-                f"{high_value:,}",
-                "Premium segment",
-                "neutral"
-            ), unsafe_allow_html=True)
-        
-        # Charts Section
-        render_dashboard_charts(customer_data)
-        
-        # Recent Activity
-        render_recent_activity()
-    else:
-        st.warning("No customer data available. Please upload data in the Customer Analysis module.")
-
-def render_dashboard_charts(customer_data):
-    """Render professional charts for the dashboard."""
-    st.markdown("""
-    <h2 style="font-size: 1.125rem; font-weight: 600; color: #0F172A; margin: 2rem 0 1rem 0;">
-        Analytics Overview
-    </h2>
-    """, unsafe_allow_html=True)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        # Digital vs Non-Digital Distribution
-        digital_counts = customer_data['prefers_digital'].value_counts()
-        fig_digital = go.Figure(data=[go.Pie(
-            labels=['Digital' if x else 'Traditional' for x in digital_counts.index],
-            values=digital_counts.values,
-            hole=0.4,
-            marker_colors=['#3B82F6', '#E2E8F0']
-        )])
-        fig_digital.update_layout(
-            title="Channel Preference Distribution",
-            font=dict(family="IBM Plex Sans"),
-            height=300,
-            showlegend=True,
-            margin=dict(l=0, r=0, t=40, b=0)
-        )
-        st.plotly_chart(fig_digital, use_container_width=True)
-    
-    with col2:
-        # Balance Distribution
-        fig_balance = px.histogram(
-            customer_data,
-            x='account_balance',
-            nbins=20,
-            title="Account Balance Distribution"
-        )
-        fig_balance.update_traces(marker_color='#3B82F6')
-        fig_balance.update_layout(
-            font=dict(family="IBM Plex Sans"),
-            height=300,
-            margin=dict(l=0, r=0, t=40, b=0),
-            xaxis_title="Balance (£)",
-            yaxis_title="Customer Count"
-        )
-        st.plotly_chart(fig_balance, use_container_width=True)
-
-def render_recent_activity():
-    """Render recent activity section."""
-    st.markdown("""
-    <h2 style="font-size: 1.125rem; font-weight: 600; color: #0F172A; margin: 2rem 0 1rem 0;">
-        Recent System Activity
-    </h2>
-    """, unsafe_allow_html=True)
-    
-    # Mock recent activities
-    activities = [
-        {"time": "2 minutes ago", "action": "Customer batch analyzed", "details": "25 customers processed", "status": "success"},
-        {"time": "15 minutes ago", "action": "Letter classified", "details": "Regulatory communication", "status": "success"},
-        {"time": "1 hour ago", "action": "Cost analysis completed", "details": "£12,450 saved", "status": "success"},
-        {"time": "2 hours ago", "action": "API connection test", "details": "All systems operational", "status": "success"},
-    ]
-    
-    for activity in activities:
-        status_color = "#10B981" if activity["status"] == "success" else "#EF4444"
-        st.markdown(f"""
-        <div style="padding: 0.75rem; border-left: 3px solid {status_color}; 
-                    background: #F8FAFC; margin-bottom: 0.5rem; border-radius: 0 6px 6px 0;">
-            <div style="display: flex; justify-content: space-between; align-items: start;">
-                <div>
-                    <div style="font-weight: 500; color: #0F172A; font-size: 0.875rem;">{activity['action']}</div>
-                    <div style="color: #64748B; font-size: 0.75rem; margin-top: 0.25rem;">{activity['details']}</div>
-                </div>
-                <div style="color: #94A3B8; font-size: 0.75rem;">{activity['time']}</div>
-            </div>
         </div>
         """, unsafe_allow_html=True)
 
@@ -757,12 +597,8 @@ def main():
     
     # Navigation
     selected_page = render_navigation_sidebar()
-    
-    # Route to appropriate page
-    if selected_page == "Executive Dashboard":
-        render_executive_dashboard()
-    
-    elif selected_page == "Customer Analysis":
+        
+    if selected_page == "Customer Analysis":
         render_customer_analysis_module()
     
     elif selected_page == "Letter Management":

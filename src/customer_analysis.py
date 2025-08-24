@@ -365,7 +365,7 @@ class CustomerAnalysisModule:
                 showlegend=True,
                 legend=dict(orientation="h", yanchor="bottom", y=-0.3, xanchor="center", x=0.5),
                 margin=dict(t=0, b=0, l=0, r=0),
-                height=350,
+                height=500,
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)'
             )
