@@ -24,8 +24,12 @@ class VideoAPI:
         # Get API key from config
         api_key = get_api_key('did')  # This will look for DID_API_KEY
         if not api_key:
-            raise ValueError("D-ID API key not found. Check your .env file.")
+            self.logger.warning("D-ID API key not found. Video generation will be disabled.")
+            # Don't raise error - just disable video functionality
+            self.enabled = False
+            return
         
+        self.enabled = True
         self.api_key = api_key
         self.base_url = "https://api.d-id.com"
         
@@ -51,6 +55,10 @@ class VideoAPI:
         Returns:
             Path to the generated video file, or None if failed
         """
+        if not self.enabled:
+            self.logger.warning("Video API not enabled - no API key configured")
+            return None
+            
         try:
             self.logger.info(f"Generating video for customer {customer_id}")
             
@@ -177,12 +185,21 @@ class VideoAPI:
     
     def get_video_stats(self) -> dict:
         """Get statistics about generated videos (like voice notes)."""
+        if not self.enabled:
+            return {
+                "enabled": False,
+                "total_files": 0,
+                "total_size_mb": 0,
+                "videos_generated": 0
+            }
+            
         video_files = list(self.video_dir.glob("*.mp4"))
         
         total_files = len(video_files)
         total_size = sum(f.stat().st_size for f in video_files if f.exists())
         
         return {
+            "enabled": True,
             "total_files": total_files,
             "total_size_mb": round(total_size / (1024 * 1024), 2),
             "videos_generated": total_files

@@ -40,13 +40,6 @@ class APIManager:
                             batch_size: int = 8) -> Optional[Dict[str, Any]]:
         """
         Analyze entire customer base for segmentation and insights.
-        
-        Args:
-            customers: List of customer records
-            batch_size: Number of customers per API batch
-            
-        Returns:
-            Complete analysis with categories, aggregates, and summaries
         """
         self.logger.info(f"Starting customer base analysis for {len(customers)} customers")
         
@@ -56,6 +49,16 @@ class APIManager:
         if not customer_categories:
             self.logger.error("Failed to get customer categories from Claude")
             return None
+        
+        # CRITICAL FIX: Merge original customer data with Claude's analysis
+        # This ensures we keep account_balance, age, digital_logins_per_month, etc.
+        for i, analyzed_customer in enumerate(customer_categories):
+            if i < len(customers):
+                original_customer = customers[i]
+                # Merge original data (like account_balance) with Claude's analysis
+                for key, value in original_customer.items():
+                    if key not in analyzed_customer:
+                        analyzed_customer[key] = value
         
         # Build aggregated insights
         aggregates = self._build_aggregates(customer_categories)

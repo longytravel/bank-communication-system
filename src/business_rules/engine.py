@@ -7,6 +7,7 @@ import logging
 from typing import Dict, Any, List
 from .customer_rules import CustomerCategoryRules
 from .communication_rules import CommunicationRules
+from .video_rules import VideoEligibilityRules
 
 class BusinessRulesEngine:
     """
@@ -21,11 +22,12 @@ class BusinessRulesEngine:
         # Initialize rule modules
         self.customer_rules = CustomerCategoryRules()
         self.communication_rules = CommunicationRules()
+        self.video_rules = VideoEligibilityRules()
         
         # Track applied rules for debugging
         self.applied_rules = []
         
-        self.logger.info("Business Rules Engine initialized")
+        self.logger.info("Business Rules Engine initialized with video support")
     
     def apply_all_rules(self, result: Dict[str, Any], customer_profile: Dict[str, Any]) -> Dict[str, Any]:
         """
@@ -51,6 +53,11 @@ class BusinessRulesEngine:
         # Apply communication rules  
         result = self.communication_rules.apply_communication_rules(result, classification)
         
+        # NEW: Apply video eligibility rules
+        result = self.video_rules.apply_video_rules(result, customer_profile)
+        if result.get('video_eligible'):
+            self.applied_rules.append("VIDEO_ELIGIBILITY")
+        
         # Apply overrides and final validations
         result = self._apply_final_validations(result, customer_profile)
         
@@ -66,11 +73,13 @@ class BusinessRulesEngine:
         customer_category = result.get("customer_category", {}).get("label", "")
         if customer_category == "Vulnerable / extra-support":
             result = self._apply_vulnerable_protection(result)
+            result = self._remove_video_for_vulnerable(result)
         
         # Ensure regulatory compliance
         classification = result.get("classification", {}).get("label", "")
         if classification == "REGULATORY":
             result = self._ensure_regulatory_compliance(result)
+            result = self._remove_video_for_regulatory(result)
         
         return result
     
@@ -115,6 +124,59 @@ class BusinessRulesEngine:
         
         result["comms_plan"]["overrides_or_risks"].insert(0,
             "⚠️ VULNERABLE CUSTOMER PROTECTION: All sales/promotional content removed")
+        
+        return result
+    
+    def _remove_video_for_vulnerable(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove video channel for vulnerable customers."""
+        if 'comms_plan' in result and 'timeline' in result['comms_plan']:
+            timeline = result['comms_plan']['timeline']
+            # Remove video steps
+            timeline = [step for step in timeline if step.get('channel') != 'video_message']
+            # Renumber steps
+            for i, step in enumerate(timeline, start=1):
+                step['step'] = i
+            result['comms_plan']['timeline'] = timeline
+        
+        # Remove video from assets
+        if 'assets' in result and 'video_message' in result['assets']:
+            del result['assets']['video_message']
+        
+        # Update video eligibility
+        result['video_eligible'] = False
+        result['video_ineligible_reasons'] = ['Vulnerable customer protection']
+        
+        return result
+    
+    def _remove_video_for_regulatory(self, result: Dict[str, Any]) -> Dict[str, Any]:
+        """Remove video channel for regulatory communications."""
+        if 'comms_plan' in result and 'timeline' in result['comms_plan']:
+            timeline = result['comms_plan']['timeline']
+            has_video = any(step.get('channel') == 'video_message' for step in timeline)
+            
+            if has_video:
+                # Remove video steps
+                timeline = [step for step in timeline if step.get('channel') != 'video_message']
+                # Renumber steps
+                for i, step in enumerate(timeline, start=1):
+                    step['step'] = i
+                result['comms_plan']['timeline'] = timeline
+                
+                # Add note
+                if 'overrides_or_risks' not in result.get('comms_plan', {}):
+                    result.setdefault('comms_plan', {})['overrides_or_risks'] = []
+                result['comms_plan']['overrides_or_risks'].append(
+                    "📋 Video removed for regulatory communication (durable medium required)"
+                )
+        
+        # Remove video from assets
+        if 'assets' in result and 'video_message' in result['assets']:
+            del result['assets']['video_message']
+        
+        # Update video eligibility
+        if result.get('video_eligible'):
+            result['video_eligible'] = False
+            result['video_ineligible_reasons'] = ['Regulatory communication requires durable medium']
         
         return result
     
@@ -180,6 +242,7 @@ class BusinessRulesEngine:
         return [
             "CustomerCategoryRules",
             "CommunicationRules", 
+            "VideoEligibilityRules",
             "VulnerableProtection",
             "RegulatoryCompliance"
         ]
@@ -188,10 +251,15 @@ class BusinessRulesEngine:
         """Get summary of all rules for documentation."""
         return {
             "Digital-first customers": "Email as durable medium for regulatory, voice notes added",
+            "High-value digital customers": "🎬 Personalized video messages for £10k+ balances",
             "Assisted-digital customers": "Email as durable medium, coaching calls offered",
             "Low/no-digital customers": "Letters for regulatory, coaching calls offered",
-            "Vulnerable customers": "⚠️ Letters for regulatory, ALL sales content removed",
+            "Vulnerable customers": "⚠️ Letters for regulatory, ALL sales content removed, no videos",
             "Accessibility needs": "Letters for regulatory, braille/audio formats ensured",
-            "Regulatory communications": "✅ Email for digital customers, letters for traditional",
-            "Upsell eligible": "Enhanced upsell materials generated"
+            "Regulatory communications": "✅ Email for digital customers, letters for traditional, no videos",
+            "Upsell eligible": "Enhanced upsell materials generated, video for high-value customers"
         }
+    
+    def get_video_eligibility_stats(self, customers: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """Get video eligibility statistics for customer base."""
+        return self.video_rules.get_video_statistics(customers)
