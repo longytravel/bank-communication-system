@@ -5,49 +5,30 @@ Enterprise-grade banking interface with AI-powered communication intelligence.
 
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
-import json
-from datetime import datetime, timedelta
 from pathlib import Path
 import sys
-import time
 
 # Add src to path for imports
 sys.path.insert(0, str(Path(__file__).parent))
 
 from config import config, is_configured
 from api.api_manager import APIManager
-from business_rules.engine import BusinessRulesEngine
 
-# Import the new professional theme
+# Import the professional theme
 from ui.professional_theme import (
     apply_professional_theme,
     render_professional_header,
-    create_metric_card,
     create_status_badge,
     create_professional_card
 )
 
-# Import cost management modules
-from communication_processing import (
-    render_cost_configuration_ui, 
-    render_cost_analyzer_ui,
-    integrate_cost_analysis_with_api_manager,
-    get_customer_plans_ui_renderer  # NEW IMPORT
-)
-
-# Import batch processing (lazy import to avoid circular dependency)
-def get_batch_processing_ui():
-    from communication_processing.batch_ui import render_batch_communication_processing
-    return render_batch_communication_processing
-
-# Import file handlers module
-from file_handlers.letter_scanner import render_enhanced_letter_management
+# Import the three core modules
 from customer_analysis import render_customer_analysis_page as render_customer_analysis_module
+from file_handlers.letter_scanner import render_enhanced_letter_management
+from communication_processing import get_customer_plans_ui_renderer
 
 # ============================================================================
-# PROFESSIONAL COMPONENTS
+# NAVIGATION
 # ============================================================================
 
 def render_navigation_sidebar():
@@ -62,7 +43,7 @@ def render_navigation_sidebar():
         </div>
         """, unsafe_allow_html=True)
         
-# Navigation options with descriptions
+        # Navigation options with descriptions
         nav_options = {
             "Customer Analysis": "AI-powered customer segmentation",
             "Letter Management": "Document classification and management",
@@ -126,311 +107,7 @@ def render_sidebar_status():
         """, unsafe_allow_html=True)
 
 # ============================================================================
-# CUSTOMER ANALYSIS PAGE (Professional Version)
-# ============================================================================
-
-def render_customer_analysis_page_OLD():
-    """Render professional customer analysis page."""
-    
-    st.markdown(create_professional_card(
-        "Customer Analysis",
-        "AI-powered customer segmentation and insights"
-    ), unsafe_allow_html=True)
-    
-    # Initialize session state
-    if 'customer_data' not in st.session_state:
-        st.session_state.customer_data = None
-    if 'analysis_results' not in st.session_state:
-        st.session_state.analysis_results = None
-    
-    # Create tabs for different functions
-    tab1, tab2, tab3 = st.tabs(["Data Upload", "Analysis Configuration", "Results"])
-    
-    with tab1:
-        render_data_upload_tab()
-    
-    with tab2:
-        render_analysis_configuration_tab()
-    
-    with tab3:
-        render_analysis_results_tab()
-
-def render_data_upload_tab():
-    """Render the data upload tab."""
-    st.markdown("""
-    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
-        Upload Customer Data
-    </h3>
-    <p style="color: #64748B; font-size: 0.875rem; margin-bottom: 1.5rem;">
-        Upload a CSV or Excel file containing customer information for AI analysis.
-    </p>
-    """, unsafe_allow_html=True)
-    
-    # File upload
-    uploaded_file = st.file_uploader(
-        "Choose file",
-        type=['csv', 'xlsx', 'xls'],
-        help="Supported formats: CSV, Excel"
-    )
-    
-    # Action buttons
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        if st.button("Use Sample Data", use_container_width=True):
-            st.session_state.customer_data = load_sample_data()
-            st.session_state.analysis_results = None
-            st.success("Sample data loaded successfully")
-    
-    with col2:
-        if st.button("View Template", use_container_width=True):
-            show_data_template()
-    
-    with col3:
-        if st.button("Clear Data", use_container_width=True, type="secondary"):
-            st.session_state.customer_data = None
-            st.session_state.analysis_results = None
-            st.info("Data cleared")
-
-# Handle uploaded file
-    if uploaded_file is not None:
-    # Add debug message
-        st.info(f"📄 Processing file: {uploaded_file.name}")
-    
-    # Process the file
-    processed_data = process_uploaded_file(uploaded_file)
-    
-    # Only show messages if we actually tried to process something
-    if processed_data is not None and len(processed_data) > 0:
-        st.session_state.customer_data = processed_data
-        st.session_state.analysis_results = None
-        st.success(f"✅ Successfully loaded {len(processed_data)} customers from {uploaded_file.name}")
-    elif uploaded_file is not None:  # Only show error if there was a file
-        st.error("❌ Failed to process the uploaded file - check file format")
-        
-    # Show data preview if loaded
-    if st.session_state.customer_data is not None:
-        df = st.session_state.customer_data
-        st.markdown(f"""
-        <div style="margin-top: 1.5rem; padding: 1rem; background: #F8FAFC; border-radius: 6px;">
-            <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin-bottom: 0.5rem;">
-                Data Summary
-            </h4>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem;">
-                <div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0F172A;">{len(df):,}</div>
-                    <div style="font-size: 0.75rem; color: #64748B;">Total Records</div>
-                </div>
-                <div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0F172A;">{len(df.columns)}</div>
-                    <div style="font-size: 0.75rem; color: #64748B;">Data Fields</div>
-                </div>
-                <div>
-                    <div style="font-size: 1.5rem; font-weight: 700; color: #0F172A;">
-                        {len(df.select_dtypes(include=['number']).columns)}
-                    </div>
-                    <div style="font-size: 0.75rem; color: #64748B;">Numeric Fields</div>
-                </div>
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        with st.expander("View Data Sample"):
-            st.dataframe(df.head(10), use_container_width=True)
-
-def render_analysis_configuration_tab():
-    """Render analysis configuration tab."""
-    if st.session_state.customer_data is None:
-        st.info("Please upload customer data first.")
-        return
-    
-    st.markdown("""
-    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
-        Configure AI Analysis
-    </h3>
-    """, unsafe_allow_html=True)
-    
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        batch_size = st.selectbox(
-            "Batch Size",
-            [5, 8, 10, 15],
-            index=1,
-            help="Number of customers per API call"
-        )
-    
-    with col2:
-        max_customers = st.selectbox(
-            "Maximum Customers",
-            ["All", "10", "25", "50", "100"],
-            index=0,
-            help="Limit for testing purposes"
-        )
-    
-    with col3:
-        analysis_depth = st.selectbox(
-            "Analysis Depth",
-            ["Standard", "Detailed", "Comprehensive"],
-            index=1,
-            help="Level of analysis detail"
-        )
-    
-    # Calculate customers to process
-    customer_data = st.session_state.customer_data
-    if max_customers == "All":
-        customers_to_process = len(customer_data)
-    else:
-        customers_to_process = min(int(max_customers), len(customer_data))
-    
-    # Analysis summary
-    st.markdown(f"""
-    <div style="margin: 1.5rem 0; padding: 1rem; background: #F8FAFC; border-radius: 6px;">
-        <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin-bottom: 0.5rem;">
-            Analysis Summary
-        </h4>
-        <ul style="margin: 0; padding-left: 1.5rem; color: #64748B; font-size: 0.875rem;">
-            <li>Customers to analyze: <strong>{customers_to_process:,}</strong></li>
-            <li>Estimated time: <strong>{customers_to_process * 2} seconds</strong></li>
-            <li>API calls required: <strong>{(customers_to_process + batch_size - 1) // batch_size}</strong></li>
-        </ul>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    # Run analysis button
-    col1, col2, col3 = st.columns([2, 1, 2])
-    with col2:
-        if st.button(
-            f"Analyze {customers_to_process} Customers",
-            type="primary",
-            use_container_width=True
-        ):
-            run_customer_analysis(customer_data.head(customers_to_process), batch_size)
-
-def render_analysis_results_tab():
-    """Render analysis results tab."""
-    if st.session_state.analysis_results is None:
-        st.info("No analysis results available. Please run analysis first.")
-        return
-    
-    results = st.session_state.analysis_results
-    customer_categories = results.get('customer_categories', [])
-    aggregates = results.get('aggregates', {})
-    
-    # Results header
-    st.markdown("""
-    <h3 style="font-size: 1rem; font-weight: 600; color: #0F172A; margin-bottom: 1rem;">
-        Analysis Results
-    </h3>
-    """, unsafe_allow_html=True)
-    
-    # Key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    total_analyzed = aggregates.get('total_customers', 0)
-    upsell_eligible = aggregates.get('upsell_eligible_count', 0)
-    vulnerable_count = aggregates.get('vulnerable_count', 0)
-    accessibility_count = aggregates.get('accessibility_needs_count', 0)
-    
-    with col1:
-        st.markdown(create_metric_card(
-            "Customers Analyzed",
-            f"{total_analyzed:,}",
-            "100% complete",
-            "positive"
-        ), unsafe_allow_html=True)
-    
-    with col2:
-        upsell_pct = (upsell_eligible / total_analyzed * 100) if total_analyzed > 0 else 0
-        st.markdown(create_metric_card(
-            "Upsell Eligible",
-            f"{upsell_eligible:,}",
-            f"{upsell_pct:.0f}% of base",
-            "positive" if upsell_pct > 30 else "neutral"
-        ), unsafe_allow_html=True)
-    
-    with col3:
-        st.markdown(create_metric_card(
-            "Vulnerable",
-            f"{vulnerable_count:,}",
-            "Protected status",
-            "neutral"
-        ), unsafe_allow_html=True)
-    
-    with col4:
-        st.markdown(create_metric_card(
-            "Accessibility Needs",
-            f"{accessibility_count:,}",
-            "Special support",
-            "neutral"
-        ), unsafe_allow_html=True)
-    
-    # Customer segments chart
-    if aggregates.get('categories'):
-        st.markdown("""
-        <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
-            Customer Segmentation
-        </h4>
-        """, unsafe_allow_html=True)
-        
-        categories = aggregates.get('categories', {})
-        fig = go.Figure(data=[go.Pie(
-            labels=list(categories.keys()),
-            values=list(categories.values()),
-            hole=0.4,
-            marker_colors=['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6']
-        )])
-        fig.update_layout(
-            font=dict(family="IBM Plex Sans"),
-            height=350,
-            margin=dict(l=0, r=0, t=0, b=0)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-    
-    # Customer details table
-    st.markdown("""
-    <h4 style="font-size: 0.875rem; font-weight: 600; color: #0F172A; margin: 1.5rem 0 1rem 0;">
-        Individual Customer Analysis
-    </h4>
-    """, unsafe_allow_html=True)
-    
-    # Create professional table
-    customer_df = pd.DataFrame([{
-        'Customer ID': c.get('customer_id', ''),
-        'Name': c.get('name', ''),
-        'Category': c.get('category', ''),
-        'Upsell': 'Yes' if c.get('upsell_eligible') else 'No',
-        'Health': c.get('financial_indicators', {}).get('account_health', ''),
-        'Digital Maturity': c.get('financial_indicators', {}).get('digital_maturity', '')
-    } for c in customer_categories])
-    
-    st.dataframe(customer_df, use_container_width=True, height=400)
-    
-    # Export options
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        csv_data = customer_df.to_csv(index=False)
-        st.download_button(
-            label="Export CSV",
-            data=csv_data,
-            file_name=f"customer_analysis_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-            mime="text/csv",
-            use_container_width=True
-        )
-    
-    with col2:
-        json_data = json.dumps(results, indent=2, default=str)
-        st.download_button(
-            label="Export JSON",
-            data=json_data,
-            file_name=f"analysis_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json",
-            mime="application/json",
-            use_container_width=True
-        )
-
-# ============================================================================
-# UTILITY FUNCTIONS
+# UTILITY FUNCTIONS (Keep only if needed by other modules)
 # ============================================================================
 
 @st.cache_data
@@ -440,141 +117,6 @@ def load_customer_data():
     if csv_path.exists():
         return pd.read_csv(csv_path)
     return None
-
-def load_sample_data():
-    """Load the sample customer data."""
-    try:
-        csv_path = Path("data/customer_profiles/sample_customers.csv")
-        if csv_path.exists():
-            df = pd.read_csv(csv_path)
-            return df
-        return None
-    except Exception as e:
-        st.error(f"Error loading sample data: {str(e)}")
-        return None
-
-def process_uploaded_file(uploaded_file):
-    """Process the uploaded customer data file."""
-    # Check if uploaded_file is None first
-    if uploaded_file is None:
-        return None
-        
-    try:
-        if uploaded_file.name.endswith('.csv'):
-            df = pd.read_csv(uploaded_file)
-        else:
-            df = pd.read_excel(uploaded_file)
-        return df
-    except Exception as e:
-        st.error(f"Error processing file: {str(e)}")
-        return None
-
-def show_data_template():
-    """Show the expected data template."""
-    st.info("""
-    **Required Fields:** customer_id, name, age, account_balance
-    
-    **Recommended Fields:** digital_logins_per_month, mobile_app_usage, email_opens_per_month, 
-    phone_calls_per_month, branch_visits_per_month, prefers_digital, requires_support, 
-    accessibility_needs, income_level, employment_status
-    """)
-
-def run_customer_analysis(customer_data, batch_size):
-    """Run the AI customer analysis with better error handling."""
-    
-    # Check configuration first
-    if not is_configured():
-        st.error("❌ API keys not configured. Please set them in Streamlit Cloud Secrets.")
-        st.info("Add ANTHROPIC_API_KEY and OPENAI_API_KEY in your app settings → Secrets")
-        return
-    
-    try:
-        api_manager = APIManager()
-        
-        # Test API connection first
-        with st.spinner("Testing API connection..."):
-            api_status = api_manager.get_api_status()
-            
-            if api_status.get('claude', {}).get('status') != 'connected':
-                st.error(f"❌ Claude API not connected: {api_status.get('claude', {}).get('error', 'Unknown error')}")
-                return
-            
-            if api_status.get('openai', {}).get('status') != 'connected':
-                st.warning(f"⚠️ OpenAI API not connected: {api_status.get('openai', {}).get('error', 'Unknown error')}")
-        
-        st.success("✅ API connection successful")
-        
-    except Exception as e:
-        st.error(f"❌ Failed to initialize APIs: {str(e)}")
-        st.info("Check that your API keys are correctly set in Streamlit Cloud Secrets")
-        return
-    
-    # Progress indicator with more detail
-    progress_bar = st.progress(0)
-    status_text = st.empty()
-    
-    try:
-        customers_list = customer_data.to_dict('records')
-        total_customers = len(customers_list)
-        
-        status_text.text(f"Analyzing {total_customers} customers in batches of {batch_size}...")
-        
-        # Run the analysis with timeout handling
-        try:
-            analysis_results = api_manager.analyze_customer_base(
-                customers_list, 
-                batch_size=batch_size
-            )
-            
-            progress_bar.progress(1.0)
-            
-            if analysis_results:
-    # Force save to session state
-                st.session_state.analysis_results = analysis_results
-                st.session_state.analysis_timestamp = datetime.now()  # Add timestamp
-    
-    # Show what we got
-                num_cats = len(analysis_results.get('customer_categories', []))
-                st.success(f"✅ Successfully analyzed {num_cats} customers")
-    
-    # Debug: show what's in the results
-    #            st.write("Debug - Results structure:")
-    #            st.write(f"- customer_categories: {num_cats} items")
-    #            st.write(f"- aggregates: {bool(analysis_results.get('aggregates'))}")
-    #          st.write(f"- Keys in results: {list(analysis_results.keys())}")
-            
-                           
-                # Show a preview of results
-                if analysis_results.get('customer_categories'):
-                    st.info(f"Found {len(analysis_results['customer_categories'])} customer profiles")
-                    st.info(f"Categories: {analysis_results.get('aggregates', {}).get('categories', {})}")
-                
-                time.sleep(2)
-            #    st.rerun()
-            else:
-                st.error("❌ Analysis returned no results. The API call may have failed.")
-                st.info("Try reducing the batch size or number of customers")
-                
-        except Exception as analysis_error:
-            st.error(f"❌ Analysis failed: {str(analysis_error)}")
-            
-            # More specific error messages
-            if "timeout" in str(analysis_error).lower():
-                st.info("The request timed out. Try analyzing fewer customers or reducing batch size.")
-            elif "rate" in str(analysis_error).lower():
-                st.info("Rate limit hit. Try reducing batch size to 3 or less.")
-            elif "key" in str(analysis_error).lower():
-                st.info("API key issue. Check your Streamlit Cloud Secrets.")
-            else:
-                st.info("Try: 1) Reducing batch size to 3, 2) Analyzing only 5-10 customers first")
-                
-    except Exception as e:
-        st.error(f"❌ Unexpected error: {str(e)}")
-        st.info("Full error details:")
-        st.exception(e)
-    finally:
-        progress_bar.empty()
-        status_text.empty()
 
 # ============================================================================
 # MAIN APPLICATION
@@ -597,44 +139,17 @@ def main():
     
     # Navigation
     selected_page = render_navigation_sidebar()
-        
+    
+    # Route to appropriate page
     if selected_page == "Customer Analysis":
         render_customer_analysis_module()
     
     elif selected_page == "Letter Management":
-        from file_handlers.letter_scanner import render_enhanced_letter_management
         render_enhanced_letter_management()
         
     elif selected_page == "Customer Communication Plans":
-        # Use the new modular approach
         customer_plans_renderer = get_customer_plans_ui_renderer()
         customer_plans_renderer()
-    
-    elif selected_page == "Batch Processing":
-        batch_ui_renderer = get_batch_processing_ui()
-        batch_ui_renderer()
-    
-    elif selected_page == "Cost Management":
-        st.markdown(create_professional_card(
-            "Cost Management",
-            "Communication cost optimization and analysis"
-        ), unsafe_allow_html=True)
-        
-        tab1, tab2 = st.tabs(["Configuration", "Analysis"])
-        
-        with tab1:
-            render_cost_configuration_ui()
-        
-        with tab2:
-            customer_categories = st.session_state.get("analysis_results", {}).get("customer_categories", [])
-            render_cost_analyzer_ui(customer_categories)
-    
-    elif selected_page == "System Configuration":
-        st.markdown(create_professional_card(
-            "System Configuration",
-            "API settings and system parameters"
-        ), unsafe_allow_html=True)
-        st.info("Configuration interface will be updated in the next iteration.")
 
 if __name__ == "__main__":
     main()
