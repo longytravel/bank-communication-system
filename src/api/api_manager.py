@@ -8,6 +8,7 @@ from typing import Dict, Any, List, Optional
 from pathlib import Path
 from .claude_api import ClaudeAPI
 from .openai_api import OpenAIAPI
+from .video_api import VideoAPI
 
 class APIManager:
     """
@@ -26,6 +27,14 @@ class APIManager:
         except Exception as e:
             self.logger.error(f"Failed to initialize API Manager: {e}")
             raise
+        
+        # After the OpenAI initialization, add Video API
+        try:
+            self.video = VideoAPI()
+            self.logger.info("Video API initialized")
+        except Exception as e:
+            self.logger.warning(f"Video API not available: {e}")
+            self.video = None
     
     def analyze_customer_base(self, customers: List[Dict[str, Any]], 
                             batch_size: int = 8) -> Optional[Dict[str, Any]]:
@@ -147,6 +156,15 @@ class APIManager:
             Dict mapping customer_id to generated file path
         """
         return self.openai.generate_voice_notes_batch(voice_requests)
+    
+    def generate_video_message(self, text: str, customer_id: str, 
+                              message_type: str = "notification") -> Optional[Path]:
+        """Generate video message (similar to voice note)."""
+        if not self.video:
+            self.logger.warning("Video API not initialized")
+            return None
+        
+        return self.video.generate_video_message(text, customer_id, message_type)
     
     def _generate_voice_note_for_customer(self, strategy: Dict[str, Any], customer_id: str) -> Optional[Path]:
         """Generate voice note for a single customer's communication strategy."""
@@ -271,7 +289,8 @@ class APIManager:
         """Get status of all API connections."""
         status = {
             "claude": {"status": "unknown", "model": None, "error": None},
-            "openai": {"status": "unknown", "model": None, "error": None}
+            "openai": {"status": "unknown", "model": None, "error": None},
+            "video": {"status": "unknown", "model": None, "error": None}
         }
         
         # Check Claude
@@ -306,13 +325,28 @@ class APIManager:
                 "error": str(e)
             }
         
+        # Check Video (D-ID)
+        if self.video:
+            status["video"] = {
+                "status": "connected",
+                "provider": "D-ID",
+                "error": None
+            }
+        else:
+            status["video"] = {
+                "status": "not initialized",
+                "provider": None,
+                "error": "Video API not available"
+            }
+        
         return status
     
     def test_all_apis(self) -> Dict[str, Any]:
         """Test all API connections with simple requests."""
         results = {
             "claude": {"success": False, "error": None, "response_time": None},
-            "openai": {"success": False, "error": None, "response_time": None}
+            "openai": {"success": False, "error": None, "response_time": None},
+            "video": {"success": False, "error": None, "response_time": None}
         }
         
         # Test Claude with simple classification
@@ -348,6 +382,22 @@ class APIManager:
         except Exception as e:
             results["openai"]["error"] = str(e)
         
+        # Test Video (D-ID)
+        if self.video:
+            try:
+                start_time = time.time()
+                test_path = self.video.test_video_generation()
+                
+                if test_path and test_path.exists():
+                    results["video"]["success"] = True
+                    results["video"]["response_time"] = round(time.time() - start_time, 2)
+                else:
+                    results["video"]["error"] = "Video generation failed"
+            except Exception as e:
+                results["video"]["error"] = str(e)
+        else:
+            results["video"]["error"] = "Video API not initialized"
+        
         return results
     
     def get_usage_stats(self) -> Dict[str, Any]:
@@ -357,6 +407,10 @@ class APIManager:
             "claude_model": self.claude.model,
             "openai_model": self.openai.tts_model
         }
+        
+        # Add video stats if available
+        if self.video:
+            stats["video_messages"] = self.video.get_video_stats()
         
         return stats
     

@@ -47,7 +47,8 @@ class Config:
         """Load API keys from environment variables."""
         self.api_keys = {
             'claude': os.getenv('CLAUDE_API_KEY'),
-            'openai': os.getenv('OPENAI_API_KEY')
+            'openai': os.getenv('OPENAI_API_KEY'),
+            'did': os.getenv('DID_API_KEY')
         }
         
         # Check for missing API keys
