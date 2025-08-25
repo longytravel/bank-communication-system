@@ -211,7 +211,10 @@ class VideoAPI:
         # First check if customer data has explicit language field
         if customer_data:
             # Check for explicit language field in customer data
-            customer_language = customer_data.get('language', '').lower()
+            customer_language = customer_data.get('preferred_language', '').lower()
+            if not customer_language:
+                customer_language = customer_data.get('language', '').lower()
+            
             if customer_language:
                 # Map common language codes/names to our keys
                 language_mapping = {
@@ -486,9 +489,9 @@ class VideoAPI:
         # Get language configuration
         lang_config = self.language_config.get(language, self.language_config['english'])
         
-        # Build payload with language-specific settings
+        # Build payload with correct avatar URL format
         payload = {
-            "source_url": f"https://d-id-public-bucket.s3.amazonaws.com/{avatar_id}.jpg",
+            "source_url": "https://create-images-results.d-id.com/api_docs/assets/noelle.jpeg",
             "script": {
                 "type": "text",
                 "input": text,
@@ -679,8 +682,6 @@ class VideoAPI:
         if not self.enabled:
             return 0
             
-        import time
-        
         cutoff_time = time.time() - (days_old * 24 * 60 * 60)
         deleted_count = 0
         

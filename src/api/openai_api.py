@@ -40,85 +40,85 @@ class OpenAIAPI:
         
         self.logger.info("OpenAI API initialized successfully")
 
-def generate_voice_note(self, text: str, customer_id: str, 
-                      message_type: str = "notification",
-                      customer_language: str = None) -> Optional[Path]:
-    """
-    Generate a voice note from text using OpenAI TTS.
-    
-    Args:
-        text: Text to convert to speech
-        customer_id: Customer identifier for filename
-        message_type: Type of message (notification, alert, etc.)
-        customer_language: Customer's preferred language
+    def generate_voice_note(self, text: str, customer_id: str, 
+                          message_type: str = "notification",
+                          customer_language: str = None) -> Optional[Path]:
+        """
+        Generate a voice note from text using OpenAI TTS.
         
-    Returns:
-        Path to the generated audio file, or None if failed
-    """
-    try:
-        self.logger.info(f"Generating voice note for customer {customer_id}, language: {customer_language}")
-        
-        # Check if language was explicitly passed
-        is_spanish = False
-        if customer_language and customer_language.lower() in ['spanish', 'español', 'es']:
-            is_spanish = True
-            self.logger.info(f"Using Spanish voice for customer {customer_id}")
-        else:
-            # Fallback to text detection
-            spanish_indicators = ['hola', 'gracias', 'señor', 'señora', 'cuenta', 'banco', 'usted', 'está', 'día']
-            text_lower = text.lower()
-            is_spanish = any(word in text_lower for word in spanish_indicators)
+        Args:
+            text: Text to convert to speech
+            customer_id: Customer identifier for filename
+            message_type: Type of message (notification, alert, etc.)
+            customer_language: Customer's preferred language
+            
+        Returns:
+            Path to the generated audio file, or None if failed
+        """
+        try:
+            self.logger.info(f"Generating voice note for customer {customer_id}, language: {customer_language}")
+            
+            # Check if language was explicitly passed
+            is_spanish = False
+            if customer_language and customer_language.lower() in ['spanish', 'español', 'es']:
+                is_spanish = True
+                self.logger.info(f"Using Spanish voice for customer {customer_id}")
+            else:
+                # Fallback to text detection
+                spanish_indicators = ['hola', 'gracias', 'señor', 'señora', 'cuenta', 'banco', 'usted', 'está', 'día']
+                text_lower = text.lower()
+                is_spanish = any(word in text_lower for word in spanish_indicators)
+                if is_spanish:
+                    self.logger.info(f"Detected Spanish from text for customer {customer_id}")
+            
+            # Select appropriate voice for language
             if is_spanish:
-                self.logger.info(f"Detected Spanish from text for customer {customer_id}")
-        
-        # Select appropriate voice for language
-        if is_spanish:
-            voice = "nova"  # Nova works well for Spanish
-            self.logger.info("Using Spanish-compatible voice")
-        else:
-            voice = self.default_voice
-        
-        # Clean text for TTS
-        clean_text = self._clean_text_for_tts(text)
-        
-        if not clean_text.strip():
-            self.logger.warning(f"No valid text to convert for customer {customer_id}")
+                voice = "nova"  # Nova works well for Spanish
+                self.logger.info("Using Spanish-compatible voice")
+            else:
+                voice = self.default_voice
+            
+            # Clean text for TTS
+            clean_text = self._clean_text_for_tts(text)
+            
+            if not clean_text.strip():
+                self.logger.warning(f"No valid text to convert for customer {customer_id}")
+                return None
+            
+            # Truncate if too long
+            if len(clean_text) > self.max_text_length:
+                clean_text = clean_text[:self.max_text_length - 3] + "..."
+                self.logger.warning(f"Text truncated for TTS (customer {customer_id})")
+            
+            # Generate filename
+            timestamp = time.strftime("%Y%m%d_%H%M%S")
+            filename = f"{customer_id}_{message_type}_{timestamp}.mp3"
+            file_path = self.voice_notes_dir / filename
+            
+            # Generate speech with selected voice
+            
+            response = self.client.audio.speech.create(
+                model=self.tts_model,
+                voice=voice,
+                input=clean_text
+            )
+            
+            # Save to file
+            response.stream_to_file(str(file_path))
+            
+            self.logger.info(f"Voice note generated: {file_path}")
+            return file_path
+            
+        except Exception as e:
+            self.logger.error(f"Error generating voice note for customer {customer_id}: {e}")
             return None
-        
-        # Truncate if too long
-        if len(clean_text) > self.max_text_length:
-            clean_text = clean_text[:self.max_text_length - 3] + "..."
-            self.logger.warning(f"Text truncated for TTS (customer {customer_id})")
-        
-        # Generate filename
-        timestamp = time.strftime("%Y%m%d_%H%M%S")
-        filename = f"{customer_id}_{message_type}_{timestamp}.mp3"
-        file_path = self.voice_notes_dir / filename
-        
-        # Generate speech with selected voice
-        response = self.client.audio.speech.create(
-            model=self.tts_model,
-            voice=voice,
-            input=clean_text
-        )
-        
-        # Save to file
-        response.stream_to_file(str(file_path))
-        
-        self.logger.info(f"Voice note generated: {file_path}")
-        return file_path
-        
-    except Exception as e:  # THIS WAS MISSING!
-        self.logger.error(f"Error generating voice note for customer {customer_id}: {e}")
-        return None
-
     
     def generate_voice_notes_batch(self, voice_requests: list) -> dict:
         """
         Generate multiple voice notes efficiently.
         
         Args:
-            voice_requests: List of dicts with 'text', 'customer_id', 'message_type'
+            voice_requests: List of dicts with 'text', 'customer_id', 'message_type', 'customer_language'
             
         Returns:
             Dict mapping customer_id to file path (or None if failed)
@@ -131,8 +131,9 @@ def generate_voice_note(self, text: str, customer_id: str,
             customer_id = request.get('customer_id')
             text = request.get('text', '')
             message_type = request.get('message_type', 'notification')
+            customer_language = request.get('customer_language', None)
             
-            file_path = self.generate_voice_note(text, customer_id, message_type)
+            file_path = self.generate_voice_note(text, customer_id, message_type, customer_language)
             results[customer_id] = file_path
             
             # Small delay to avoid rate limits
@@ -152,7 +153,7 @@ def generate_voice_note(self, text: str, customer_id: str,
         
         # Remove emojis and special characters that TTS can't handle
         # Keep basic punctuation for natural speech
-        text = re.sub(r'[^\w\s.,!?;:\'\"-]', '', text)
+        text = re.sub(r'[^\w\s.,!?;:\'\"-áéíóúñÁÉÍÓÚÑ]', '', text)  # Keep Spanish characters
         
         # Remove excessive whitespace
         text = re.sub(r'\s+', ' ', text)

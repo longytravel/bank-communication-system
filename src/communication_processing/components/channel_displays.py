@@ -208,6 +208,7 @@ def render_voice_channel(content: Dict, selected_plan: Dict, selected_index: int
     with st.expander("🔊 Voice Note", expanded=False):
         voice_content = content.get('voice_note', {})
         
+        # Extract the script text
         if isinstance(voice_content, dict):
             voice_script = voice_content.get('script', '')
         else:
@@ -249,13 +250,32 @@ def render_voice_channel(content: Dict, selected_plan: Dict, selected_index: int
                 if st.button("🔊 Generate Audio", key=f"gen_voice_{selected_index}"):
                     with st.spinner("Generating voice note..."):
                         try:
+                            import sys
+                            sys.path.append('src')
                             from api.api_manager import APIManager
                             api_manager = APIManager()
                             
+                            # CRITICAL FIX: Get the actual voice script text that's displayed
+                            # This is the Spanish text that you see in the UI
+                            actual_voice_text = voice_script  # Use the voice_script variable from above
+                            
+                            # Get customer's language
+                            customer_language = selected_plan.get('customer_language', 'English')
+                            
+                            # Debug output
+                            print("=" * 60)
+                            print(f"DEBUG: Voice Generation Button Clicked")
+                            print(f"Customer ID: {customer_id}")
+                            print(f"Customer Language: {customer_language}")
+                            print(f"Voice Script Text (first 200 chars): {actual_voice_text[:200]}")
+                            print("=" * 60)
+                            
+                            # Generate voice note with the actual Spanish text
                             voice_path = api_manager.openai.generate_voice_note(
-                                voice_script,
+                                actual_voice_text,  # This is the Spanish text displayed in the UI
                                 customer_id,
-                                "notification"
+                                "notification",
+                                customer_language=customer_language
                             )
                             
                             if voice_path and voice_path.exists():
@@ -264,6 +284,9 @@ def render_voice_channel(content: Dict, selected_plan: Dict, selected_index: int
                             else:
                                 st.error("Failed to generate voice note")
                         except Exception as e:
+                            print(f"ERROR in voice generation: {e}")
+                            import traceback
+                            traceback.print_exc()
                             st.error(f"Error: {str(e)}")
         
         voice_cost = selected_plan['costs']['channels'].get('voice_note', {}).get('cost', 0.02)

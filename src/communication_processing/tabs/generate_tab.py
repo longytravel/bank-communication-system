@@ -463,11 +463,19 @@ def calculate_channel_costs(channels: List[str], cost_manager) -> Dict:
     
     return costs
 
+# Fix for src/communication_processing/tabs/generate_tab.py
+# 
+# Find the function create_real_ai_content_for_customer (around line 450)
+# and REPLACE THE ENTIRE FUNCTION with this fixed version:
+
 def create_real_ai_content_for_customer(customer: Dict, classification_type: str, cost_manager, api_manager, options: Dict) -> Dict:
     """Create real AI-generated content for a single customer."""
     
     name = customer.get('name', 'Customer')
     category = customer.get('category', 'Unknown')
+    
+    # CRITICAL FIX: Get the customer's preferred language
+    customer_language = customer.get('preferred_language', 'English')
     
     # Get financial indicators
     financial_indicators = customer.get('financial_indicators', {})
@@ -487,12 +495,25 @@ def create_real_ai_content_for_customer(customer: Dict, classification_type: str
     channels = get_channels_for_category(category, classification_type, customer, options)
     
     try:
+        # CRITICAL FIX: Add language instruction at the beginning of the prompt
+        language_instruction = ""
+        if customer_language and customer_language.lower() != 'english':
+            language_instruction = f"""
+            CRITICAL REQUIREMENT: Generate ALL content in {customer_language}!
+            - All messages (push notifications, emails, SMS, letters, voice notes) must be in {customer_language}
+            - Use culturally appropriate greetings for {customer_language} speakers
+            - Keep JSON field names in English, but all customer-facing text in {customer_language}
+            """
+        
         # Create comprehensive prompt for all channels
         prompt = f"""
+        {language_instruction}
+        
         Create personalized banking communication content for this customer across multiple channels:
         
         CUSTOMER PROFILE:
         - Name: {name}
+        - Preferred Language: {customer_language}
         - Customer Category: {category}
         - Account Health: {account_health}
         - Engagement Level: {engagement_level}
@@ -503,50 +524,56 @@ def create_real_ai_content_for_customer(customer: Dict, classification_type: str
         - Video Tier: {video_eligibility.get('tier', 'None')}
         
         COMMUNICATION TYPE: {classification_type}
+        LANGUAGE REQUIRED: {customer_language}
         
         Generate content for these channels: {', '.join(channels)}
         
-        Return JSON with this exact structure (include video_message if customer is video eligible):
+        Return JSON with this exact structure (ALL TEXT IN {customer_language}):
         {{
             "in_app": {{
                 "push_title": "Resonance Bank",
-                "push_body": "personalized push notification text (max 50 chars)",
-                "message_subject": "subject line for in-app message",
-                "message_body": "full in-app message (max 500 chars)",
-                "cta_primary": "primary button text",
-                "cta_secondary": "secondary button text"
+                "push_body": "personalized push notification text in {customer_language} (max 50 chars)",
+                "message_subject": "subject line for in-app message in {customer_language}",
+                "message_body": "full in-app message in {customer_language} (max 500 chars)",
+                "cta_primary": "primary button text in {customer_language}",
+                "cta_secondary": "secondary button text in {customer_language}"
             }},
             "email": {{
-                "subject": "email subject line",
-                "preview": "email preview text (max 100 chars)",
-                "body": "full email body (max 1000 chars)"
+                "subject": "email subject line in {customer_language}",
+                "preview": "email preview text in {customer_language} (max 100 chars)",
+                "body": "full email body in {customer_language} (max 1000 chars)"
             }},
             "sms": {{
-                "text": "SMS message (max 160 chars)"
+                "text": "SMS message in {customer_language} (max 160 chars)"
             }},
             "letter": {{
-                "greeting": "Dear {name}",
-                "body": "letter body text (max 500 chars)",
-                "closing": "Yours sincerely"
+                "greeting": "Dear {name} in {customer_language}",
+                "body": "letter body text in {customer_language} (max 500 chars)",
+                "closing": "closing in {customer_language}"
             }},
             "voice_note": {{
-                "script": "voice note script (max 200 chars)"
+                "script": "voice note script in {customer_language} (max 200 chars)"
             }},
             "video_message": {{
-                "script": "personalized video script for high-value customer (max 250 chars)",
-                "greeting": "personalized greeting",
-                "closing": "thank you message"
+                "script": "personalized video script in {customer_language} (max 250 chars)",
+                "greeting": "personalized greeting in {customer_language}",
+                "closing": "thank you message in {customer_language}"
             }},
-            "upsell_message": "upsell message if eligible, null otherwise",
-            "personalization_notes": ["list of personalization points used"]
+            "upsell_message": "upsell message in {customer_language} if eligible, null otherwise",
+            "personalization_notes": ["list of personalization points used"],
+            "language_used": "{customer_language}"
         }}
+        
+        REMEMBER: ALL customer-facing text must be in {customer_language}!
         """
         
-        # Get AI response
+        # Get AI response with explicit language instruction
+        system_message = f"You are a professional banking communication specialist. Create highly personalized content using specific customer data. IMPORTANT: Generate all content in {customer_language} as specified."
+        
         ai_result = api_manager.claude._with_exponential_backoff(
             model=api_manager.claude.model,
             max_tokens=1500,
-            system="You are a professional banking communication specialist. Create highly personalized content using specific customer data.",
+            system=system_message,
             messages=[{"role": "user", "content": prompt}],
             temperature=0.3
         )
@@ -559,21 +586,27 @@ def create_real_ai_content_for_customer(customer: Dict, classification_type: str
                 content_text = content_text.replace("```json", "").replace("```", "").strip()
             
             content = json.loads(content_text)
+            
+            # Add language to the content for tracking
+            content['language_generated'] = customer_language
         else:
             # Fallback to template
             content = generate_template_content(name, category, classification_type, upsell_eligible, customer, options)
     
     except Exception as e:
+        print(f"Error generating AI content for {name}: {e}")
         # Fallback to template content
         content = generate_template_content(name, category, classification_type, upsell_eligible, customer, options)
     
     # Calculate costs
     costs = calculate_channel_costs(channels, cost_manager)
     
+    # CRITICAL: Include language in the return data
     return {
         'customer_id': customer.get('customer_id', 'Unknown'),
         'customer_name': name,
         'customer_category': category,
+        'customer_language': customer_language,  # ADD THIS
         'classification_type': classification_type,
         'channels': channels,
         'content': content,

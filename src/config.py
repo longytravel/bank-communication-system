@@ -1,6 +1,8 @@
 """
 Configuration Module for Bank Communication System
 Handles API keys, file paths, and system settings securely.
+
+SAVE THIS AS: src/config.py (REPLACE THE ENTIRE FILE)
 """
 
 import os
@@ -35,6 +37,7 @@ class Config:
             'letters': self.base_dir / 'data' / 'letters', 
             'outputs': self.base_dir / 'data' / 'outputs',
             'voice_notes': self.base_dir / 'data' / 'voice_notes',
+            'video_messages': self.base_dir / 'data' / 'video_messages',  # ADDED
             'logs': self.base_dir / 'logs'
         }
         
