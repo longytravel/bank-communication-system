@@ -81,20 +81,55 @@ def render_navigation_sidebar():
     return selected_page
 
 def render_sidebar_status():
-    """Render system status in sidebar."""
+    """Render system status in sidebar with debug info."""
+    
+    # Debug section at the top
+    with st.expander("🔍 Debug Info", expanded=True):
+        st.write("**API Key Check:**")
+        
+        # Check if API keys exist
+        from config import get_api_key
+        claude_key = get_api_key('claude')
+        openai_key = get_api_key('openai')
+        
+        if claude_key:
+            st.success(f"✅ Claude key found: {claude_key[:10]}...")
+        else:
+            st.error("❌ Claude key missing")
+            
+        if openai_key:
+            st.success(f"✅ OpenAI key found: {openai_key[:10]}...")
+        else:
+            st.warning("⚠️ OpenAI key missing")
+    
+    # Try to get actual status
+    claude_connected = False
+    openai_connected = False
+    error_message = None
+    
     try:
+        from api.api_manager import APIManager
         api_manager = APIManager()
         status = api_manager.get_api_status()
         claude_connected = status.get('claude', {}).get('status') == 'connected'
         openai_connected = status.get('openai', {}).get('status') == 'connected'
-    except:
-        claude_connected = False
-        openai_connected = False
+        
+        # Show detailed status
+        with st.expander("📊 API Status Details"):
+            st.json(status)
+            
+    except Exception as e:
+        error_message = str(e)
+        with st.expander("❌ Connection Error"):
+            st.error(f"Error: {error_message}")
+    
+    # Display status badges
+    st.markdown("**System Status:**")
     
     status_items = [
         ("Configuration", is_configured(), "active" if is_configured() else "error"),
         ("Claude AI", claude_connected, "active" if claude_connected else "error"),
-        ("OpenAI", openai_connected, "active" if openai_connected else "error"),
+        ("OpenAI", openai_connected, "active" if openai_connected else "warning"),
     ]
     
     for label, connected, status in status_items:

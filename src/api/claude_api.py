@@ -36,7 +36,7 @@ class ClaudeAPI:
         self.max_delay = 30.0
         
         # Model settings
-        self.model = "claude-sonnet-4-20250514"  # Latest model
+        self.model = "claude-3-5-sonnet-20241022"  # Latest model
         self.default_max_tokens = 3500
         self.default_temperature = 0.2
         
@@ -274,7 +274,7 @@ class ClaudeAPI:
         - Transaction history, frequency, amounts
         - Account age, types, balances
         - Digital engagement patterns
-        - Demographics and preferences
+        - Demographics and preferences INCLUDING preferred_language
         - Financial stress indicators
 
         For each customer, return:
@@ -293,7 +293,8 @@ class ClaudeAPI:
             }},
             "support_needs": ["specific needs"],
             "preferred_channels": ["channel names"],
-            "risk_factors": ["any concerns"]
+            "risk_factors": ["any concerns"],
+            "preferred_language": "preserve the original preferred_language from input data"
         }}
 
         Return: {{"customer_categories": [array of customer objects]}}
@@ -302,14 +303,14 @@ class ClaudeAPI:
         {json.dumps(customers, indent=2)}
         """
     
-def _build_letter_processing_prompt(self, letter: str, profile: Dict[str, Any], channels: List[str]) -> str:
+    def _build_letter_processing_prompt(self, letter: str, profile: Dict[str, Any], channels: List[str]) -> str:
         """Build prompt for letter processing."""
         # Get customer's language preference
         customer_language = profile.get('preferred_language', 'English')
         
         # Add language instruction
         language_instruction = ""
-        if customer_language != 'English':
+        if customer_language and customer_language.lower() != 'english':
             language_instruction = f"""
             CRITICAL: Generate ALL content in {customer_language}!
             - All messages, emails, SMS, letters must be in {customer_language}
@@ -334,7 +335,7 @@ def _build_letter_processing_prompt(self, letter: str, profile: Dict[str, Any], 
         Return comprehensive JSON with:
         - Detailed customer categorization with reasoning
         - Communication plan with timeline
-        - All assets (email, SMS, letter, audio, etc.) in {customer_language}
+        - All assets (email, SMS, letter, audio, etc.) in {customer_language if customer_language else 'English'}
         - Upsell analysis (if NOT eligible, explain WHY in detail)
         - Personalization based on their specific data
 
@@ -342,7 +343,7 @@ def _build_letter_processing_prompt(self, letter: str, profile: Dict[str, Any], 
         If vulnerable or high-risk, explain why no upsell is appropriate.
         """
 
-def get_model_info(self) -> Dict[str, Any]:
+    def get_model_info(self) -> Dict[str, Any]:
         """Get information about the current model configuration."""
         return {
             "model": self.model,

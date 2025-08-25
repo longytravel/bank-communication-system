@@ -237,7 +237,6 @@ class CustomerAnalysisModule:
             
             if analysis_results:
                 self.analysis_results = analysis_results
-                # Store in session state for other pages to use
                 st.session_state.analysis_results = analysis_results
                 progress_bar.progress(1.0)
                 status_text.text("✅ Analysis complete!")

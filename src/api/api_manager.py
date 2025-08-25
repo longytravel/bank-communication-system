@@ -64,11 +64,18 @@ class APIManager:
                 # DEBUG: Check Maria before merge
                 if original_customer.get('name') == 'Maria Garcia':
                     print(f"DEBUG Step 2: Before merge - Maria's analyzed data has language: {analyzed_customer.get('preferred_language', 'NOT FOUND')}")
+                    print(f"DEBUG Step 2: Original Maria has language: {original_customer.get('preferred_language', 'NOT FOUND')}")
                 
-                # Merge original data (like account_balance AND preferred_language) with Claude's analysis
+                # FORCE preserve critical fields that might get lost
+                critical_fields = ['preferred_language', 'account_balance', 'age', 'digital_logins_per_month', 'email', 'phone']
+                
+                # First, merge all original data with Claude's analysis
                 for key, value in original_customer.items():
-                    if key not in analyzed_customer:
-                        analyzed_customer[key] = value
+                    # Always override with original for critical fields
+                    if key in critical_fields:
+                        analyzed_customer[key] = value  # Force override for critical fields
+                    elif key not in analyzed_customer:
+                        analyzed_customer[key] = value  # Add missing fields
                 
                 # DEBUG: Check Maria after merge
                 if analyzed_customer.get('name') == 'Maria Garcia':
@@ -122,7 +129,7 @@ class APIManager:
         customer_category = strategy.get("customer_category", {}).get("label", "")
         
         if generate_voice and customer_category == "Digital-first self-serve":
-            voice_note_path = self._generate_voice_note_for_customer(strategy, customer_id)
+            voice_note_path = self._generate_voice_note_for_customer(strategy, customer_id, customer_profile)
             
             if voice_note_path:
                 # Add voice note to timeline if not already present
@@ -173,19 +180,53 @@ class APIManager:
         Returns:
             Dict mapping customer_id to generated file path
         """
-        return self.openai.generate_voice_notes_batch(voice_requests)
+        results = {}
+        
+        for request in voice_requests:
+            customer_id = request.get('customer_id')
+            text = request.get('text', '')
+            message_type = request.get('message_type', 'notification')
+            customer_language = request.get('customer_language', None)
+            
+            file_path = self.openai.generate_voice_note(
+                text, 
+                customer_id, 
+                message_type,
+                customer_language=customer_language
+            )
+            results[customer_id] = file_path
+        
+        return results
     
     def generate_video_message(self, text: str, customer_id: str, 
-                              message_type: str = "notification") -> Optional[Path]:
+                              message_type: str = "notification",
+                              customer_data: Dict = None) -> Optional[Path]:
         """Generate video message (similar to voice note)."""
         if not self.video:
             self.logger.warning("Video API not initialized")
             return None
         
-        return self.video.generate_video_message(text, customer_id, message_type)
+        return self.video.generate_video_message(
+            text, 
+            customer_id, 
+            message_type,
+            customer_data=customer_data
+        )
     
-    def _generate_voice_note_for_customer(self, strategy: Dict[str, Any], customer_id: str) -> Optional[Path]:
+    def _generate_voice_note_for_customer(self, strategy: Dict[str, Any], customer_id: str, 
+                                         customer_profile: Dict[str, Any] = None) -> Optional[Path]:
         """Generate voice note for a single customer's communication strategy."""
+        
+        # Get customer language from profile or strategy
+        customer_language = None
+        if customer_profile:
+            customer_language = customer_profile.get('preferred_language')
+        
+        if not customer_language:
+            # Try to get from strategy
+            customer_language = strategy.get("preferred_language")
+        
+        self.logger.info(f"Generating voice note for customer {customer_id}, language: {customer_language}")
         
         # Get text for voice note from strategy
         voice_text = None
@@ -206,7 +247,13 @@ class APIManager:
             self.logger.warning(f"No suitable text found for voice note generation (customer {customer_id})")
             return None
         
-        return self.openai.generate_voice_note(voice_text, customer_id, "notification")
+        # Pass language to voice generation
+        return self.openai.generate_voice_note(
+            voice_text, 
+            customer_id, 
+            "notification",
+            customer_language=customer_language
+        )
     
     def _build_aggregates(self, customer_categories: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Build aggregate statistics from customer categories."""
