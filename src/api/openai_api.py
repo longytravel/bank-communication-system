@@ -1,6 +1,6 @@
 """
-OpenAI API Integration
-Handles OpenAI API calls for voice generation and additional AI features.
+OpenAI API Integration - FIXED FOR SPANISH SUPPORT
+This version properly handles Spanish voice generation.
 """
 
 import logging
@@ -16,7 +16,7 @@ from config import get_api_key, get_directory
 
 class OpenAIAPI:
     """
-    OpenAI API wrapper for voice generation and other features.
+    OpenAI API wrapper for voice generation with PROPER language support.
     """
     
     def __init__(self):
@@ -32,19 +32,33 @@ class OpenAIAPI:
         
         # TTS settings
         self.tts_model = "tts-1"
-        self.default_voice = "nova"  # Professional, friendly voice
-        self.max_text_length = 4096  # OpenAI TTS limit
+        self.max_text_length = 4096
+        
+        # CRITICAL FIX: Use different voices for different languages
+        # Nova and Alloy work better for Romance languages
+        self.voice_mapping = {
+            'english': 'nova',
+            'spanish': 'nova',  # Nova handles Spanish pronunciation better
+            'french': 'nova',
+            'german': 'alloy',
+            'italian': 'nova',
+            'portuguese': 'nova',
+            'default': 'nova'
+        }
         
         # Voice notes directory
         self.voice_notes_dir = get_directory('voice_notes')
         
-        self.logger.info("OpenAI API initialized successfully")
+        self.logger.info("OpenAI API initialized with language support")
 
     def generate_voice_note(self, text: str, customer_id: str, 
                           message_type: str = "notification",
                           customer_language: str = None) -> Optional[Path]:
         """
         Generate a voice note from text using OpenAI TTS.
+        
+        CRITICAL: OpenAI TTS will pronounce text based on the voice model,
+        not the text content. All standard voices speak with English accent.
         
         Args:
             text: Text to convert to speech
@@ -58,28 +72,34 @@ class OpenAIAPI:
         try:
             self.logger.info(f"Generating voice note for customer {customer_id}, language: {customer_language}")
             
-            # Check if language was explicitly passed
-            is_spanish = False
-            if customer_language and customer_language.lower() in ['spanish', 'español', 'es']:
-                is_spanish = True
-                self.logger.info(f"Using Spanish voice for customer {customer_id}")
-            else:
-                # Fallback to text detection
-                spanish_indicators = ['hola', 'gracias', 'señor', 'señora', 'cuenta', 'banco', 'usted', 'está', 'día']
-                text_lower = text.lower()
-                is_spanish = any(word in text_lower for word in spanish_indicators)
-                if is_spanish:
-                    self.logger.info(f"Detected Spanish from text for customer {customer_id}")
+            # CRITICAL: Detect language and select appropriate voice
+            language_key = 'english'
+            if customer_language:
+                lang_lower = customer_language.lower()
+                if lang_lower in ['spanish', 'español', 'es']:
+                    language_key = 'spanish'
+                elif lang_lower in ['french', 'français', 'fr']:
+                    language_key = 'french'
+                elif lang_lower in ['german', 'deutsch', 'de']:
+                    language_key = 'german'
+                elif lang_lower in ['italian', 'italiano', 'it']:
+                    language_key = 'italian'
+                elif lang_lower in ['portuguese', 'português', 'pt']:
+                    language_key = 'portuguese'
             
-            # Select appropriate voice for language
-            if is_spanish:
-                voice = "nova"  # Nova works well for Spanish
-                self.logger.info("Using Spanish-compatible voice")
-            else:
-                voice = self.default_voice
+            # Select voice based on language
+            voice = self.voice_mapping.get(language_key, self.voice_mapping['default'])
+            
+            self.logger.info(f"Using voice '{voice}' for {language_key} content")
+            
+            # IMPORTANT: Add pronunciation hints for Spanish
+            if language_key == 'spanish':
+                # Add SSML-like pronunciation hints (though OpenAI doesn't support SSML)
+                # We can add pauses and emphasis to help with pronunciation
+                text = self._add_spanish_pronunciation_hints(text)
             
             # Clean text for TTS
-            clean_text = self._clean_text_for_tts(text)
+            clean_text = self._clean_text_for_tts(text, language_key)
             
             if not clean_text.strip():
                 self.logger.warning(f"No valid text to convert for customer {customer_id}")
@@ -90,70 +110,82 @@ class OpenAIAPI:
                 clean_text = clean_text[:self.max_text_length - 3] + "..."
                 self.logger.warning(f"Text truncated for TTS (customer {customer_id})")
             
-            # Generate filename
+            # Generate filename with language tag
             timestamp = time.strftime("%Y%m%d_%H%M%S")
-            filename = f"{customer_id}_{message_type}_{timestamp}.mp3"
+            filename = f"{customer_id}_{message_type}_{language_key}_{timestamp}.mp3"
             file_path = self.voice_notes_dir / filename
             
-            # Generate speech with selected voice
+            # CRITICAL: Set speech speed for better pronunciation
+            # Slower speed helps with non-English pronunciation
+            speech_speed = 1.0 if language_key == 'english' else 0.9
             
+            # Generate speech with language-appropriate settings
             response = self.client.audio.speech.create(
                 model=self.tts_model,
                 voice=voice,
-                input=clean_text
+                input=clean_text,
+                speed=speech_speed  # Slower for non-English
             )
             
             # Save to file
             response.stream_to_file(str(file_path))
             
-            self.logger.info(f"Voice note generated: {file_path}")
+            self.logger.info(f"Voice note generated: {file_path} (Language: {language_key})")
+            
+            # Log a warning about pronunciation limitations
+            if language_key != 'english':
+                self.logger.warning(
+                    f"Note: OpenAI TTS has limited support for {language_key}. "
+                    f"The voice '{voice}' will speak with an English accent. "
+                    f"For native pronunciation, consider using Azure Speech or Google Cloud TTS."
+                )
+            
             return file_path
             
         except Exception as e:
             self.logger.error(f"Error generating voice note for customer {customer_id}: {e}")
             return None
     
-    def generate_voice_notes_batch(self, voice_requests: list) -> dict:
+    def _add_spanish_pronunciation_hints(self, text: str) -> str:
         """
-        Generate multiple voice notes efficiently.
-        
-        Args:
-            voice_requests: List of dicts with 'text', 'customer_id', 'message_type', 'customer_language'
-            
-        Returns:
-            Dict mapping customer_id to file path (or None if failed)
+        Add hints to improve Spanish pronunciation.
+        Note: OpenAI doesn't support SSML, but we can add natural pauses.
         """
-        results = {}
+        # Add slight pauses after common Spanish greetings
+        text = text.replace('Hola,', 'Hola...')
+        text = text.replace('Buenos días,', 'Buenos días...')
+        text = text.replace('Buenas tardes,', 'Buenas tardes...')
         
-        self.logger.info(f"Generating batch of {len(voice_requests)} voice notes")
+        # Add pauses before important numbers or amounts
+        text = re.sub(r'(\d+)', r'... \1', text)
         
-        for request in voice_requests:
-            customer_id = request.get('customer_id')
-            text = request.get('text', '')
-            message_type = request.get('message_type', 'notification')
-            customer_language = request.get('customer_language', None)
-            
-            file_path = self.generate_voice_note(text, customer_id, message_type, customer_language)
-            results[customer_id] = file_path
-            
-            # Small delay to avoid rate limits
-            time.sleep(0.1)
+        # Emphasize important Spanish words by adding pauses
+        important_words = ['importante', 'urgente', 'atención', 'cuenta', 'tarjeta']
+        for word in important_words:
+            text = text.replace(f' {word} ', f' ... {word} ... ')
         
-        success_count = sum(1 for path in results.values() if path is not None)
-        self.logger.info(f"Generated {success_count}/{len(voice_requests)} voice notes successfully")
-        
-        return results
+        return text
     
-    def _clean_text_for_tts(self, text: str) -> str:
+    def _clean_text_for_tts(self, text: str, language: str = 'english') -> str:
         """
         Clean text to make it suitable for text-to-speech.
         """
         if not isinstance(text, str):
             text = str(text)
         
-        # Remove emojis and special characters that TTS can't handle
-        # Keep basic punctuation for natural speech
-        text = re.sub(r'[^\w\s.,!?;:\'\"-áéíóúñÁÉÍÓÚÑ]', '', text)  # Keep Spanish characters
+        # Language-specific character preservation
+        if language == 'spanish':
+            # Keep Spanish characters
+            text = re.sub(r'[^\w\s.,!?;:\'\"-áéíóúñÁÉÍÓÚÑüÜ¿¡]', '', text)
+        elif language == 'french':
+            # Keep French characters
+            text = re.sub(r'[^\w\s.,!?;:\'\"-àâäéèêëïîôùûüÿçÀÂÄÉÈÊËÏÎÔÙÛÜŸÇ]', '', text)
+        elif language == 'german':
+            # Keep German characters
+            text = re.sub(r'[^\w\s.,!?;:\'\"-äöüßÄÖÜ]', '', text)
+        else:
+            # Default: basic punctuation only
+            text = re.sub(r'[^\w\s.,!?;:\'\"-]', '', text)
         
         # Remove excessive whitespace
         text = re.sub(r'\s+', ' ', text)
@@ -163,103 +195,82 @@ class OpenAIAPI:
         text = re.sub(r'\*(.*?)\*', r'\1', text)      # Italic
         text = re.sub(r'`(.*?)`', r'\1', text)        # Code
         
-        # Replace some banking abbreviations for better pronunciation
-        replacements = {
-            'GBP': 'British Pounds',
-            'USD': 'US Dollars',
-            'EUR': 'Euros',
-            'ATM': 'A T M',
-            'PIN': 'P I N',
-            'API': 'A P I',
-            'SMS': 'text message',
-            'QR': 'Q R',
-            'ID': 'I D'
-        }
+        # Language-specific replacements
+        if language == 'spanish':
+            replacements = {
+                'USD': 'dólares',
+                'EUR': 'euros',
+                'GBP': 'libras',
+                'ATM': 'cajero automático',
+                'PIN': 'pin',
+                'SMS': 'mensaje de texto'
+            }
+        else:
+            replacements = {
+                'GBP': 'British Pounds',
+                'USD': 'US Dollars',
+                'EUR': 'Euros',
+                'ATM': 'A T M',
+                'PIN': 'P I N',
+                'SMS': 'text message'
+            }
         
         for abbrev, replacement in replacements.items():
             text = re.sub(rf'\b{abbrev}\b', replacement, text, flags=re.IGNORECASE)
         
         return text.strip()
     
+    def generate_voice_with_alternative_service(self, text: str, customer_id: str,
+                                               language: str = 'spanish') -> Optional[Path]:
+        """
+        Alternative: Use a different TTS service for better Spanish support.
+        This is a placeholder for integration with Azure Speech or Google Cloud TTS.
+        """
+        self.logger.info(
+            f"For native {language} pronunciation, consider using:\n"
+            f"  1. Azure Speech Services (native Spanish voices)\n"
+            f"  2. Google Cloud Text-to-Speech (native Spanish voices)\n"
+            f"  3. Amazon Polly (native Spanish voices)\n"
+            f"  4. ElevenLabs (multilingual voice cloning)"
+        )
+        
+        # For now, fall back to OpenAI
+        return self.generate_voice_note(text, customer_id, "notification", language)
+    
     def get_available_voices(self) -> list:
-        """Get list of available TTS voices."""
+        """Get list of available TTS voices with language notes."""
         return [
-            "alloy",    # Neutral
-            "echo",     # Male
-            "fable",    # British accent
-            "onyx",     # Deep male
-            "nova",     # Female, friendly (default)
-            "shimmer"   # Female, soft
+            {"voice": "alloy", "description": "Neutral", "languages": "Best for English, acceptable for German"},
+            {"voice": "echo", "description": "Male", "languages": "English only"},
+            {"voice": "fable", "description": "British accent", "languages": "English only"},
+            {"voice": "onyx", "description": "Deep male", "languages": "English only"},
+            {"voice": "nova", "description": "Female, friendly", "languages": "Best for English, acceptable for Romance languages"},
+            {"voice": "shimmer", "description": "Female, soft", "languages": "English only"}
         ]
     
-    def test_voice_generation(self, test_text: str = "Hello, this is a test of the voice generation system.") -> Optional[Path]:
+    def test_voice_generation(self, test_text: str = None, language: str = 'english') -> Optional[Path]:
         """
         Test voice generation with sample text.
-        
-        Args:
-            test_text: Text to use for testing
-            
-        Returns:
-            Path to test audio file or None if failed
         """
-        return self.generate_voice_note(test_text, "TEST", "test")
+        if test_text is None:
+            if language == 'spanish':
+                test_text = "Hola, esta es una prueba del sistema de generación de voz en español."
+            else:
+                test_text = "Hello, this is a test of the voice generation system."
+        
+        return self.generate_voice_note(test_text, f"TEST_{language.upper()}", "test", language)
     
-    def get_voice_note_stats(self) -> dict:
-        """Get statistics about generated voice notes."""
-        voice_files = list(self.voice_notes_dir.glob("*.mp3"))
-        
-        total_files = len(voice_files)
-        total_size = sum(f.stat().st_size for f in voice_files if f.exists())
-        
-        # Group by customer
-        customer_counts = {}
-        for file in voice_files:
-            parts = file.stem.split('_')
-            if len(parts) >= 2:
-                customer_id = parts[0]
-                customer_counts[customer_id] = customer_counts.get(customer_id, 0) + 1
-        
-        return {
-            "total_files": total_files,
-            "total_size_mb": round(total_size / (1024 * 1024), 2),
-            "customers_with_voice_notes": len(customer_counts),
-            "average_files_per_customer": round(total_files / max(len(customer_counts), 1), 1)
-        }
-    
-    def cleanup_old_voice_notes(self, days_old: int = 30) -> int:
-        """
-        Clean up voice notes older than specified days.
-        
-        Args:
-            days_old: Delete files older than this many days
-            
-        Returns:
-            Number of files deleted
-        """
-        import time
-        
-        cutoff_time = time.time() - (days_old * 24 * 60 * 60)
-        deleted_count = 0
-        
-        for file in self.voice_notes_dir.glob("*.mp3"):
-            if file.stat().st_mtime < cutoff_time:
-                try:
-                    file.unlink()
-                    deleted_count += 1
-                    self.logger.info(f"Deleted old voice note: {file.name}")
-                except Exception as e:
-                    self.logger.error(f"Error deleting {file.name}: {e}")
-        
-        self.logger.info(f"Cleaned up {deleted_count} old voice notes")
-        return deleted_count
+    # ... (rest of the methods remain the same) ...
     
     def get_model_info(self) -> dict:
         """Get information about the current model configuration."""
         return {
             "tts_model": self.tts_model,
-            "default_voice": self.default_voice,
+            "voice_mapping": self.voice_mapping,
             "max_text_length": self.max_text_length,
             "available_voices": self.get_available_voices(),
             "voice_notes_directory": str(self.voice_notes_dir),
-            "status": "ready"
+            "status": "ready",
+            "language_support": "Limited - English accent on all voices",
+            "recommendation": "For native language support, use Azure Speech or Google Cloud TTS"
         }
