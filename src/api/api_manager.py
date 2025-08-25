@@ -43,6 +43,11 @@ class APIManager:
         """
         self.logger.info(f"Starting customer base analysis for {len(customers)} customers")
         
+        # DEBUG: Check if preferred_language is in original data
+        for customer in customers:
+            if customer.get('name') == 'Maria Garcia':
+                print(f"DEBUG Step 1: Maria's original data has language: {customer.get('preferred_language', 'NOT FOUND')}")
+        
         # Get customer categories from Claude
         customer_categories = self.claude.analyze_customer_batch(customers, batch_size)
         
@@ -51,14 +56,24 @@ class APIManager:
             return None
         
         # CRITICAL FIX: Merge original customer data with Claude's analysis
-        # This ensures we keep account_balance, age, digital_logins_per_month, etc.
+        # This ensures we keep account_balance, age, digital_logins_per_month, preferred_language, etc.
         for i, analyzed_customer in enumerate(customer_categories):
             if i < len(customers):
                 original_customer = customers[i]
-                # Merge original data (like account_balance) with Claude's analysis
+                
+                # DEBUG: Check Maria before merge
+                if original_customer.get('name') == 'Maria Garcia':
+                    print(f"DEBUG Step 2: Before merge - Maria's analyzed data has language: {analyzed_customer.get('preferred_language', 'NOT FOUND')}")
+                
+                # Merge original data (like account_balance AND preferred_language) with Claude's analysis
                 for key, value in original_customer.items():
                     if key not in analyzed_customer:
                         analyzed_customer[key] = value
+                
+                # DEBUG: Check Maria after merge
+                if analyzed_customer.get('name') == 'Maria Garcia':
+                    print(f"DEBUG Step 3: After merge - Maria's data has language: {analyzed_customer.get('preferred_language', 'NOT FOUND')}")
+                    print(f"DEBUG Step 3: Maria's full keys: {list(analyzed_customer.keys())}")
         
         # Build aggregated insights
         aggregates = self._build_aggregates(customer_categories)
