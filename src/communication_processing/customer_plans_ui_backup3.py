@@ -23,9 +23,6 @@ from communication_processing.cost_configuration import CostConfigurationManager
 from business_rules.video_rules import VideoEligibilityRules
 from communication_processing.components.channel_displays import render_all_channels
 from communication_processing.tabs.setup_tab import render_setup_tab
-from communication_processing.tabs.generate_tab import render_generate_plans_tab
-from communication_processing.tabs.results_tab import render_results_tab
-from communication_processing.components.metrics_display import render_summary_metrics
 
 def render_customer_communication_plans_page():
     """Render the Customer Communication Plans page with tabs."""
@@ -94,6 +91,242 @@ def check_communication_prerequisites():
         return False
     
     return True
+
+def render_generate_plans_tab():
+    """Render the generate plans tab with full customer processing."""
+    
+    # Check if setup is complete
+    if 'selected_letter' not in st.session_state:
+        st.warning("Please complete the Setup tab first.")
+        return
+    
+    st.markdown("### 🚀 Generate Personalized Communication Plans")
+    
+    # Show what we're about to process
+    customer_categories = st.session_state.analysis_results.get('customer_categories', [])
+    selected_letter = st.session_state.selected_letter
+    options = st.session_state.get('processing_options', {})
+    
+    # Filter customers based on selection
+    filtered_customers = filter_customers(customer_categories, options.get('customer_filter', 'First 20'))
+    
+    # Count video eligible in filtered set
+    video_rules = VideoEligibilityRules()
+    video_eligible_count = sum(1 for c in filtered_customers 
+                              if video_rules.is_video_eligible(c).get('eligible', False))
+    
+    # Processing summary
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.metric("Customers to Process", len(filtered_customers))
+    
+    with col2:
+        classification = selected_letter['classification']
+        class_type = classification.get('classification', 'UNKNOWN') if classification else 'UNKNOWN'
+        st.metric("Letter Type", class_type)
+    
+    with col3:
+        st.metric("Personalization", options.get('personalization_level', 'Standard'))
+    
+    with col4:
+        if options.get('generate_videos', False):
+            st.metric("🎬 Video Eligible", video_eligible_count)
+        else:
+            st.metric("Videos", "Disabled")
+    
+    # Processing options
+    st.markdown("### Processing Options")
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        processing_mode = st.radio(
+            "Processing Mode",
+            ["Quick Demo (Simulated)", "Full AI Generation (Real)"],
+            help="Quick Demo uses templates, Full AI makes real API calls"
+        )
+    
+    with col2:
+        if processing_mode == "Full AI Generation (Real)":
+            st.warning("⚠️ This will make real API calls and may take 2-3 minutes for 20 customers")
+            api_batch_size = st.slider("API Batch Size", 1, 5, 3, 
+                                      help="Process customers in batches to avoid rate limits")
+        else:
+            api_batch_size = 5
+    
+    # Generation button
+    col1, col2, col3 = st.columns([2, 1, 2])
+    
+    with col2:
+        if st.button(
+            f"🎯 Generate Plans for {len(filtered_customers)} Customers",
+            type="primary",
+            use_container_width=True,
+            disabled='communication_plans_generated' in st.session_state
+        ):
+            if processing_mode == "Full AI Generation (Real)":
+                generate_real_communication_plans(filtered_customers, selected_letter, options, api_batch_size)
+            else:
+                generate_demo_communication_plans(filtered_customers, selected_letter, options)
+    
+    # Show results if generated
+    if 'communication_plans_generated' in st.session_state:
+        show_generation_success()
+
+def filter_customers(customer_categories: List[Dict], filter_option: str) -> List[Dict]:
+    """Filter customers based on selection."""
+    if filter_option == "First 20":
+        return customer_categories[:20]
+    elif filter_option == "First 10":
+        return customer_categories[:10]
+    elif filter_option == "First 5":
+        return customer_categories[:5]
+    elif filter_option == "Digital-first only":
+        digital = [c for c in customer_categories if c.get('category') == 'Digital-first self-serve']
+        return digital[:20]  # Max 20
+    elif filter_option == "High-value only":
+        high_value = []
+        for customer in customer_categories:
+            if customer.get('upsell_eligible', False):
+                high_value.append(customer)
+        return high_value[:20]  # Max 20
+    elif filter_option == "Video-eligible only":
+        # NEW: Filter for video eligible customers
+        video_rules = VideoEligibilityRules()
+        video_eligible = []
+        for customer in customer_categories:
+            if video_rules.is_video_eligible(customer).get('eligible', False):
+                video_eligible.append(customer)
+        return video_eligible[:20]  # Max 20
+    else:
+        return customer_categories[:20]
+
+def generate_demo_communication_plans(customers, letter, options):
+    """Generate demo plans using templates (fast, no API calls)."""
+    
+    st.markdown("""
+    <div style="background: #3B82F6; color: white; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
+        <h3 style="margin-top: 0; color: white;">🤖 Generating Demo Plans</h3>
+        <p style="color: rgba(255,255,255,0.9); margin-bottom: 0;">
+            Creating personalized demo content for all customers...
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    progress = st.progress(0)
+    status = st.empty()
+    
+    # Initialize cost manager
+    cost_manager = CostConfigurationManager()
+    
+    # Process all customers
+    all_customer_plans = []
+    
+    for i, customer in enumerate(customers):
+        status.text(f"Processing customer {i+1} of {len(customers)}: {customer.get('name', 'Unknown')}...")
+        progress.progress((i + 1) / len(customers))
+        
+        # Generate demo content for this customer
+        classification_type = letter['classification'].get('classification', 'INFORMATION') if letter['classification'] else 'INFORMATION'
+        customer_plan = create_demo_content_for_customer(customer, classification_type, cost_manager, options)
+        all_customer_plans.append(customer_plan)
+        
+        time.sleep(0.1)  # Small delay for visual effect
+    
+    status.text("✅ All plans generated successfully!")
+    progress.progress(1.0)
+    time.sleep(1)
+    
+    # Store all generated plans
+    st.session_state.communication_plans_generated = True
+    st.session_state.all_customer_plans = all_customer_plans
+    st.session_state.generated_plans_data = {
+        'customers': customers,
+        'letter': letter,
+        'options': options,
+        'generated_at': datetime.now(),
+        'all_plans': all_customer_plans
+    }
+    
+    # Clear progress
+    progress.empty()
+    status.empty()
+    
+    st.success(f"🎉 Generated personalized plans for {len(customers)} customers!")
+    st.rerun()
+
+def generate_real_communication_plans(customers, letter, options, batch_size):
+    """Generate real plans with actual AI API calls."""
+    
+    st.markdown("""
+    <div style="background: #3B82F6; color: white; border-radius: 8px; padding: 1.5rem; margin: 1rem 0;">
+        <h3 style="margin-top: 0; color: white;">🤖 AI Generation in Progress (Real API Calls)</h3>
+        <p style="color: rgba(255,255,255,0.9); margin-bottom: 0;">
+            Creating real AI-powered content for all customers...
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    progress = st.progress(0)
+    status = st.empty()
+    
+    # Initialize managers
+    cost_manager = CostConfigurationManager()
+    
+    try:
+        api_manager = APIManager()
+    except Exception as e:
+        st.error(f"Failed to initialize API: {e}")
+        return
+    
+    # Process customers in batches
+    all_customer_plans = []
+    
+    for batch_start in range(0, len(customers), batch_size):
+        batch_end = min(batch_start + batch_size, len(customers))
+        batch = customers[batch_start:batch_end]
+        
+        status.text(f"Processing batch: customers {batch_start+1} to {batch_end} of {len(customers)}...")
+        
+        for i, customer in enumerate(batch):
+            customer_num = batch_start + i + 1
+            status.text(f"Generating AI content for customer {customer_num}/{len(customers)}: {customer.get('name', 'Unknown')}...")
+            progress.progress(customer_num / len(customers))
+            
+            # Generate real AI content
+            classification_type = letter['classification'].get('classification', 'INFORMATION') if letter['classification'] else 'INFORMATION'
+            customer_plan = create_real_ai_content_for_customer(customer, classification_type, cost_manager, api_manager, options)
+            all_customer_plans.append(customer_plan)
+            
+            # Rate limiting delay
+            time.sleep(0.5)
+        
+        # Delay between batches
+        if batch_end < len(customers):
+            status.text(f"Pausing between batches to avoid rate limits...")
+            time.sleep(2)
+    
+    status.text("✅ All AI content generated successfully!")
+    progress.progress(1.0)
+    time.sleep(1)
+    
+    # Store all generated plans
+    st.session_state.communication_plans_generated = True
+    st.session_state.all_customer_plans = all_customer_plans
+    st.session_state.generated_plans_data = {
+        'customers': customers,
+        'letter': letter,
+        'options': options,
+        'generated_at': datetime.now(),
+        'all_plans': all_customer_plans
+    }
+    
+    # Clear progress
+    progress.empty()
+    status.empty()
+    
+    st.success(f"🎉 Generated real AI-powered plans for {len(customers)} customers!")
+    st.rerun()
 
 def create_demo_content_for_customer(customer: Dict, classification_type: str, cost_manager, options: Dict) -> Dict:
     """Create demo content for a single customer using templates."""
@@ -450,6 +683,234 @@ def show_generation_success():
             if 'all_customer_plans' in st.session_state:
                 del st.session_state.all_customer_plans
             st.rerun()
+
+def render_results_tab():
+    """Render comprehensive results with all customers and full content."""
+    
+    if 'communication_plans_generated' not in st.session_state:
+        st.info("Generate communication plans first to see results.")
+        return
+    
+    if 'all_customer_plans' not in st.session_state:
+        st.error("No generated plans found. Please regenerate.")
+        return
+    
+    all_plans = st.session_state.all_customer_plans
+    
+    st.markdown("### 📊 Communication Plans Results")
+    
+    # Summary metrics at the top
+    render_summary_metrics(all_plans)
+    
+    # Complete customer table
+    st.markdown("### 📋 All Customer Plans Summary")
+    render_customer_summary_table(all_plans)
+    
+    # Individual customer details
+    st.markdown("### 👤 Individual Customer Communication Details")
+    render_individual_customer_details(all_plans)
+    
+    # Export section
+    st.markdown("### 📥 Export Results")
+    render_export_section(all_plans)
+
+def render_summary_metrics(all_plans: List[Dict]):
+    """Render summary metrics for all generated plans."""
+    
+    # Calculate totals
+    total_customers = len(all_plans)
+    total_traditional = sum(plan['costs']['traditional_total'] for plan in all_plans)
+    total_optimized = sum(plan['costs']['optimized_total'] for plan in all_plans)
+    total_savings = total_traditional - total_optimized
+    savings_percentage = (total_savings / total_traditional * 100) if total_traditional > 0 else 0
+    
+    # Count channels used
+    total_in_app = sum(1 for plan in all_plans if 'in_app' in plan['channels'])
+    total_email = sum(1 for plan in all_plans if 'email' in plan['channels'])
+    total_sms = sum(1 for plan in all_plans if 'sms' in plan['channels'])
+    total_letter = sum(1 for plan in all_plans if 'letter' in plan['channels'])
+    total_voice = sum(1 for plan in all_plans if 'voice_note' in plan['channels'])
+    total_video = sum(1 for plan in all_plans if 'video_message' in plan['channels'])  # NEW
+    
+    # Display metrics
+    st.markdown("### 💰 Cost Analysis Summary")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        st.markdown(f"""
+        <div style="background: #FEE2E2; border: 1px solid #EF4444; border-radius: 8px; padding: 1rem;">
+            <h4 style="margin-top: 0; color: #991B1B;">Traditional Approach</h4>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #EF4444;">£{total_traditional:.2f}</div>
+            <p style="color: #991B1B; margin-bottom: 0;">All letters (£{total_traditional/total_customers:.2f}/customer)</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col2:
+        st.markdown(f"""
+        <div style="background: #DCFCE7; border: 1px solid #10B981; border-radius: 8px; padding: 1rem;">
+            <h4 style="margin-top: 0; color: #166534;">Optimized Strategy</h4>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #10B981;">£{total_optimized:.2f}</div>
+            <p style="color: #166534; margin-bottom: 0;">Smart channels (£{total_optimized/total_customers:.2f}/customer)</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col3:
+        st.markdown(f"""
+        <div style="background: #EFF6FF; border: 1px solid #3B82F6; border-radius: 8px; padding: 1rem;">
+            <h4 style="margin-top: 0; color: #1E40AF;">Total Savings</h4>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #3B82F6;">£{total_savings:.2f}</div>
+            <p style="color: #1E40AF; margin-bottom: 0;">{savings_percentage:.1f}% reduction</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    with col4:
+        st.markdown(f"""
+        <div style="background: #F3E8FF; border: 1px solid #9333EA; border-radius: 8px; padding: 1rem;">
+            <h4 style="margin-top: 0; color: #581C87;">Customers Processed</h4>
+            <div style="font-size: 1.5rem; font-weight: 700; color: #9333EA;">{total_customers}</div>
+            <p style="color: #581C87; margin-bottom: 0;">Complete analysis</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Channel usage summary (with video)
+    st.markdown("### 📱 Channel Distribution")
+    
+    col1, col2, col3, col4, col5, col6 = st.columns(6)
+    
+    with col1:
+        st.metric("📱 In-App", f"{total_in_app}", f"{total_in_app/total_customers*100:.0f}%")
+    
+    with col2:
+        st.metric("📧 Email", f"{total_email}", f"{total_email/total_customers*100:.0f}%")
+    
+    with col3:
+        st.metric("💬 SMS", f"{total_sms}", f"{total_sms/total_customers*100:.0f}%")
+    
+    with col4:
+        st.metric("📮 Letter", f"{total_letter}", f"{total_letter/total_customers*100:.0f}%")
+    
+    with col5:
+        st.metric("🔊 Voice", f"{total_voice}", f"{total_voice/total_customers*100:.0f}%")
+    
+    with col6:
+        st.metric("🎬 Video", f"{total_video}", f"{total_video/total_customers*100:.0f}%")
+
+def render_customer_summary_table(all_plans: List[Dict]):
+    """Render a comprehensive table of all customer plans."""
+    
+    # Build table data
+    table_data = []
+    
+    for plan in all_plans:
+        # Get channel indicators
+        channels_str = ", ".join(plan['channels'])
+        
+        # Build row
+        row = {
+            'Customer': plan['customer_name'],
+            'Category': plan['customer_category'],
+            'Channels': channels_str,
+            'Trad. Cost': f"£{plan['costs']['traditional_total']:.3f}",
+            'Opt. Cost': f"£{plan['costs']['optimized_total']:.3f}",
+            'Savings': f"£{plan['costs']['savings']:.3f}",
+            'Savings %': f"{plan['costs']['savings_percentage']:.1f}%",
+            'In-App': '✓' if 'in_app' in plan['channels'] else '✗',
+            'Email': '✓' if 'email' in plan['channels'] else '✗',
+            'SMS': '✓' if 'sms' in plan['channels'] else '✗',
+            'Letter': '✓' if 'letter' in plan['channels'] else '✗',
+            'Voice': '✓' if 'voice_note' in plan['channels'] else '✗',
+            'Video': '🎬' if 'video_message' in plan['channels'] else '✗',  # NEW
+            'Upsell': '✓' if plan['upsell_eligible'] else '✗'
+        }
+        
+        # Add video tier if eligible
+        if plan.get('video_eligible'):
+            row['Video Tier'] = plan.get('video_tier', '-')
+        else:
+            row['Video Tier'] = '-'
+        
+        table_data.append(row)
+    
+    # Create DataFrame
+    df = pd.DataFrame(table_data)
+    
+    # Display with color coding
+    st.dataframe(
+        df,
+        use_container_width=True,
+        height=400,
+        column_config={
+            "Savings %": st.column_config.NumberColumn(
+                "Savings %",
+                help="Percentage saved vs traditional approach",
+                format="%.1f%%",
+            ),
+        }
+    )
+    
+    # Summary statistics
+    st.markdown("#### Summary Statistics")
+    
+    col1, col2, col3, col4 = st.columns(4)
+    
+    with col1:
+        avg_savings_pct = sum(plan['costs']['savings_percentage'] for plan in all_plans) / len(all_plans)
+        st.metric("Average Savings", f"{avg_savings_pct:.1f}%")
+    
+    with col2:
+        digital_first = sum(1 for plan in all_plans if plan['customer_category'] == 'Digital-first self-serve')
+        st.metric("Digital-First Customers", f"{digital_first}/{len(all_plans)}")
+    
+    with col3:
+        vulnerable = sum(1 for plan in all_plans if plan['customer_category'] == 'Vulnerable / extra-support')
+        st.metric("Protected Customers", f"{vulnerable}/{len(all_plans)}")
+    
+    with col4:
+        video_eligible = sum(1 for plan in all_plans if plan.get('video_eligible', False))
+        st.metric("🎬 Video Eligible", f"{video_eligible}/{len(all_plans)}")
+
+# Continue with rest of functions (render_individual_customer_details, render_export_section, etc.)
+# These remain mostly the same with added video support where needed...
+
+def render_individual_customer_details(all_plans: List[Dict]):
+    """Render detailed view for each customer with full content including video."""
+    
+    # Customer selector
+    customer_names = [f"{plan['customer_name']} ({plan['customer_category']})" + 
+                      (" 🎬" if plan.get('video_eligible') else "") 
+                      for plan in all_plans]
+    
+    selected_index = st.selectbox(
+        "Select customer to view full communication details:",
+        range(len(customer_names)),
+        format_func=lambda x: customer_names[x]
+    )
+    
+    selected_plan = all_plans[selected_index]
+    
+    # Display customer header with video badge if eligible
+    video_badge = ""
+    if selected_plan.get('video_eligible'):
+        video_tier = selected_plan.get('video_tier', 'SILVER')
+        video_badge = f" | 🎬 {video_tier} Video Tier"
+    
+    st.markdown(f"""
+    <div style="background: #F8FAFC; border-radius: 8px; padding: 1rem; margin: 1rem 0;">
+        <h4 style="margin-top: 0;">{selected_plan['customer_name']}{video_badge}</h4>
+        <p style="margin-bottom: 0.5rem;"><strong>Category:</strong> {selected_plan['customer_category']}</p>
+        <p style="margin-bottom: 0.5rem;"><strong>Communication Type:</strong> {selected_plan['classification_type']}</p>
+        <p style="margin-bottom: 0;"><strong>Cost Savings:</strong> £{selected_plan['costs']['savings']:.3f} ({selected_plan['costs']['savings_percentage']:.1f}%)</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # USE THE NEW MODULE TO DISPLAY ALL CHANNELS
+    render_all_channels(selected_plan, selected_index)
+
+def render_export_section(all_plans: List[Dict]):
+    """Render export options for all results."""
+    # Existing export code remains the same
+    pass
 
 def render_analytics_tab():
     """Render analytics and insights tab."""

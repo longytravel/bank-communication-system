@@ -8,6 +8,7 @@ from typing import Dict, Any, List
 from .customer_rules import CustomerCategoryRules
 from .communication_rules import CommunicationRules
 from .video_rules import VideoEligibilityRules
+from .channel_limit_rules import ChannelLimitRules
 
 class BusinessRulesEngine:
     """
@@ -23,6 +24,7 @@ class BusinessRulesEngine:
         self.customer_rules = CustomerCategoryRules()
         self.communication_rules = CommunicationRules()
         self.video_rules = VideoEligibilityRules()
+        self.channel_limit_rules = ChannelLimitRules()
         
         # Track applied rules for debugging
         self.applied_rules = []
@@ -57,6 +59,10 @@ class BusinessRulesEngine:
         result = self.video_rules.apply_video_rules(result, customer_profile)
         if result.get('video_eligible'):
             self.applied_rules.append("VIDEO_ELIGIBILITY")
+            
+        # NEW: Apply channel limit rules to avoid overwhelming customers
+        result = self.channel_limit_rules.apply_channel_limits(result, customer_profile)
+        self.applied_rules.append("CHANNEL_LIMITS")    
         
         # Apply overrides and final validations
         result = self._apply_final_validations(result, customer_profile)
