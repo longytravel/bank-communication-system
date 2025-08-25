@@ -39,7 +39,7 @@ class OpenAIAPI:
         self.voice_notes_dir = get_directory('voice_notes')
         
         self.logger.info("OpenAI API initialized successfully")
-    
+
     def generate_voice_note(self, text: str, customer_id: str, 
                           message_type: str = "notification") -> Optional[Path]:
         """
@@ -55,6 +55,18 @@ class OpenAIAPI:
         """
         try:
             self.logger.info(f"Generating voice note for customer {customer_id}")
+            
+            # Detect language from text (Spanish indicators)
+            spanish_indicators = ['hola', 'gracias', 'señor', 'señora', 'cuenta', 'banco', 'usted', 'está', 'día']
+            text_lower = text.lower()
+            is_spanish = any(word in text_lower for word in spanish_indicators)
+            
+            # Select appropriate voice for language
+            if is_spanish:
+                voice = "nova"  # Nova works well for Spanish
+                self.logger.info("Detected Spanish - using Spanish-compatible voice")
+            else:
+                voice = self.default_voice
             
             # Clean text for TTS
             clean_text = self._clean_text_for_tts(text)
@@ -73,10 +85,10 @@ class OpenAIAPI:
             filename = f"{customer_id}_{message_type}_{timestamp}.mp3"
             file_path = self.voice_notes_dir / filename
             
-            # Generate speech
+            # Generate speech with selected voice
             response = self.client.audio.speech.create(
                 model=self.tts_model,
-                voice=self.default_voice,
+                voice=voice,
                 input=clean_text
             )
             
@@ -89,6 +101,7 @@ class OpenAIAPI:
         except Exception as e:
             self.logger.error(f"Error generating voice note for customer {customer_id}: {e}")
             return None
+
     
     def generate_voice_notes_batch(self, voice_requests: list) -> dict:
         """

@@ -135,6 +135,10 @@ class ClaudeAPI:
         """
         self.logger.info(f"Processing letter for customer: {customer_profile.get('customer_id', 'unknown')}")
         
+        # Detect customer's preferred language
+        customer_language = customer_profile.get('preferred_language', 'English')
+        self.logger.info(f"Customer language preference: {customer_language}")
+        
         # Sanitize inputs
         safe_letter = self._truncate_text(letter_text, 6000)
         safe_profile = self._sanitize_customer_data(customer_profile, 600)
@@ -298,10 +302,26 @@ class ClaudeAPI:
         {json.dumps(customers, indent=2)}
         """
     
-    def _build_letter_processing_prompt(self, letter: str, profile: Dict[str, Any], channels: List[str]) -> str:
+def _build_letter_processing_prompt(self, letter: str, profile: Dict[str, Any], channels: List[str]) -> str:
         """Build prompt for letter processing."""
+        # Get customer's language preference
+        customer_language = profile.get('preferred_language', 'English')
+        
+        # Add language instruction
+        language_instruction = ""
+        if customer_language != 'English':
+            language_instruction = f"""
+            CRITICAL: Generate ALL content in {customer_language}!
+            - All messages, emails, SMS, letters must be in {customer_language}
+            - Keep field names in English (like "email", "subject") 
+            - But all customer-facing text in {customer_language}
+            - Use culturally appropriate greetings and tone for {customer_language} speakers
+            """
+        
         return f"""
         Create a HIGHLY PERSONALIZED communication strategy for this customer.
+        
+        {language_instruction}
 
         LETTER CONTENT:
         {letter}
@@ -314,7 +334,7 @@ class ClaudeAPI:
         Return comprehensive JSON with:
         - Detailed customer categorization with reasoning
         - Communication plan with timeline
-        - All assets (email, SMS, letter, audio, etc.)
+        - All assets (email, SMS, letter, audio, etc.) in {customer_language}
         - Upsell analysis (if NOT eligible, explain WHY in detail)
         - Personalization based on their specific data
 
@@ -322,7 +342,7 @@ class ClaudeAPI:
         If vulnerable or high-risk, explain why no upsell is appropriate.
         """
 
-    def get_model_info(self) -> Dict[str, Any]:
+def get_model_info(self) -> Dict[str, Any]:
         """Get information about the current model configuration."""
         return {
             "model": self.model,
