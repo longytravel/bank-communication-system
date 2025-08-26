@@ -57,19 +57,6 @@ def render_customer_communication_plans_page():
 def check_communication_prerequisites():
     """Check if required data is available for communication planning."""
     
-    # AUTO-LOAD TEST DATA if no analysis results
-    if 'analysis_results' not in st.session_state:
-        try:
-            import json
-            from pathlib import Path
-            test_file = Path("data/test_data/test_customers_analyzed.json")
-            if test_file.exists():
-                with open(test_file, 'r') as f:
-                    st.session_state.analysis_results = json.load(f)
-                st.info("📊 Test dataset auto-loaded (3 customers)")
-        except:
-            pass
-    
     # Check for customer analysis results
     customer_data_available = 'analysis_results' in st.session_state and st.session_state.analysis_results is not None
     

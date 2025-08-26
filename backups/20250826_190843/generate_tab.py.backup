@@ -561,32 +561,8 @@ def create_real_ai_content_for_customer(customer: Dict, classification_type: str
         {letter_content}
         ========================================
         
-        CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE EXACTLY:
-        
-        1. EXTRACT these key points from the letter above:
-           - Main topic/purpose
-           - ALL specific features or services mentioned
-           - ANY actions requested from the customer
-           - ANY links or contact information
-        
-        2. Your rewrite MUST include:
-           - EVERY feature/service from the original letter
-           - The SAME core message and purpose
-           - ALL contact info and links from original
-           - Just adapt the TONE and LANGUAGE for the customer
-        
-        3. DO NOT:
-           - Replace content with generic support messages
-           - Skip any features mentioned in the original
-           - Change what the letter is about
-           - Add unrelated content
-        
-        4. EXAMPLE:
-           If original says "Set spending limits, get alerts, track savings"
-           You MUST mention ALL THREE in your rewrite
-           NOT just say "we offer helpful tools"
-        
-        TASK: Rewrite preserving ALL information, just personalize the delivery.
+        TASK: Rewrite this letter for this specific customer across multiple channels.
+        Keep the same core information but make it completely personalized.
         
         CUSTOMER PROFILE:
         - Name: {name}

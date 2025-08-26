@@ -1,0 +1,153 @@
+{
+  "customer_categories": [
+    {
+      "customer_id": "CUST011",
+      "name": "Maria Garcia",
+      "age": 35,
+      "account_balance": 25000,
+      "digital_logins_per_month": 18,
+      "email": "maria.garcia@email.com",
+      "phone": "+44 7700 900123",
+      "preferred_language": "Spanish",
+      "category": "Digital-first self-serve",
+      "category_reasoning": [
+        "18 digital logins per month shows high engagement",
+        "Age 35 in prime digital demographic",
+        "\u00a325,000 balance indicates established customer"
+      ],
+      "upsell_eligible": true,
+      "upsell_eligibility_reasoning": "Strong balance and engagement",
+      "upsell_products": [
+        "Premium Account",
+        "Travel Insurance"
+      ],
+      "financial_indicators": {
+        "account_health": "healthy",
+        "engagement_level": "high",
+        "digital_maturity": "advanced"
+      },
+      "support_needs": [],
+      "preferred_channels": [
+        "in_app",
+        "email",
+        "voice_note"
+      ],
+      "risk_factors": []
+    },
+    {
+      "customer_id": "CUST002",
+      "name": "Vulnerable Vera",
+      "age": 78,
+      "account_balance": 3500,
+      "digital_logins_per_month": 0,
+      "email": "vera.jones@email.com",
+      "phone": "+44 7700 900456",
+      "preferred_language": "English",
+      "category": "Vulnerable / extra-support",
+      "category_reasoning": [
+        "Age 78 requires extra care",
+        "No digital engagement",
+        "May need support with communications"
+      ],
+      "upsell_eligible": false,
+      "upsell_eligibility_reasoning": "Vulnerable customer - no sales",
+      "upsell_products": [],
+      "financial_indicators": {
+        "account_health": "vulnerable",
+        "engagement_level": "low",
+        "digital_maturity": "none"
+      },
+      "support_needs": [
+        "Large print",
+        "Phone support",
+        "Extra time"
+      ],
+      "preferred_channels": [
+        "letter",
+        "phone"
+      ],
+      "risk_factors": [
+        "Age",
+        "No digital access",
+        "Potential scam target"
+      ]
+    },
+    {
+      "customer_id": "CUST001",
+      "name": "Digital Dave",
+      "age": 32,
+      "account_balance": 50000,
+      "digital_logins_per_month": 45,
+      "email": "dave.wilson@email.com",
+      "phone": "+44 7700 900789",
+      "preferred_language": "English",
+      "category": "Digital-first self-serve",
+      "category_reasoning": [
+        "45 logins per month - power user",
+        "Age 32 in core digital demographic",
+        "\u00a350,000 balance - premium customer"
+      ],
+      "upsell_eligible": true,
+      "upsell_eligibility_reasoning": "Premium customer with high engagement",
+      "upsell_products": [
+        "Wealth Management",
+        "Premium Credit Card",
+        "Investment ISA"
+      ],
+      "financial_indicators": {
+        "account_health": "excellent",
+        "engagement_level": "very_high",
+        "digital_maturity": "expert"
+      },
+      "support_needs": [],
+      "preferred_channels": [
+        "in_app",
+        "video_message",
+        "email"
+      ],
+      "risk_factors": []
+    }
+  ],
+  "aggregates": {
+    "total_customers": 3,
+    "categories": {
+      "Digital-first self-serve": 2,
+      "Vulnerable / extra-support": 1
+    },
+    "upsell_eligible_count": 2,
+    "vulnerable_count": 1,
+    "accessibility_needs_count": 1,
+    "insights": [
+      "67% of customers are digital-first - prioritize app features",
+      "33% require vulnerable customer protection",
+      "67% eligible for upsell opportunities"
+    ]
+  },
+  "segment_summaries": [
+    {
+      "segment": "Digital-first self-serve",
+      "size": 2,
+      "description": "Comfortable with apps and email; quick to act",
+      "opportunities": [
+        "In-app nudges",
+        "Voice notes",
+        "Video messages"
+      ]
+    },
+    {
+      "segment": "Vulnerable / extra-support",
+      "size": 1,
+      "description": "Needs softer tone and extra care",
+      "opportunities": [
+        "Proactive callbacks",
+        "No sales pressure"
+      ]
+    }
+  ],
+  "analysis_metadata": {
+    "total_analyzed": 3,
+    "batch_size_used": 3,
+    "api_model": "claude-3-5-sonnet-20241022",
+    "analyzed_date": "2025-08-26T18:44:32.878573"
+  }
+}

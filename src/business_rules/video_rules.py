@@ -68,7 +68,7 @@ class VideoEligibilityRules:
         
         # DEBUG LOGGING
         if customer_name == "Digital Dave" or "Dave" in customer_name:
-            self.logger.info(f"🔍 DEBUGGING {customer_name}:")
+            self.logger.info(f"[DEBUG] DEBUGGING {customer_name}:")
             self.logger.info(f"  - Raw balance: {account_balance_raw} (type: {type(account_balance_raw)})")
             self.logger.info(f"  - Converted balance: £{account_balance:,.2f}")
             self.logger.info(f"  - Category: {category}")
@@ -149,9 +149,9 @@ class VideoEligibilityRules:
         
         if score >= TESTING_THRESHOLD:
             eligibility['eligible'] = True
-            self.logger.info(f"✅ Customer {customer.get('customer_id')} eligible for video (score: {score})")
+            self.logger.info(f"[OK] Customer {customer.get('customer_id')} eligible for video (score: {score})")
         else:
-            self.logger.info(f"❌ Customer {customer.get('customer_id')} not eligible for video (score: {score} < {TESTING_THRESHOLD})")
+            self.logger.info(f"[X] Customer {customer.get('customer_id')} not eligible for video (score: {score} < {TESTING_THRESHOLD})")
         
         return eligibility
     

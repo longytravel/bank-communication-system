@@ -165,29 +165,7 @@ def generate_real_communication_plans(customers, letter, options, batch_size):
             
             # Generate real AI content
             classification_type = letter['classification'].get('classification', 'INFORMATION') if letter['classification'] else 'INFORMATION'
-            # Get the actual letter content
-
-            letter_content = ""
-
-            if 'selected_letter' in st.session_state:
-
-                selected_letter = st.session_state.selected_letter
-
-                from file_handlers.letter_scanner import EnhancedLetterScanner
-
-                scanner = EnhancedLetterScanner()
-
-                letter_path = Path(selected_letter['filepath'])
-
-                letter_content = scanner.read_letter_content(letter_path)
-
-                if not letter_content:
-
-                    letter_content = "Letter content could not be read."
-
-            
-
-            customer_plan = create_real_ai_content_for_customer(customer, classification_type, letter_content, cost_manager, api_manager, options)
+            customer_plan = create_real_ai_content_for_customer(customer, classification_type, cost_manager, api_manager, options)
             all_customer_plans.append(customer_plan)
             
             # Rate limiting delay
@@ -247,29 +225,7 @@ def generate_demo_communication_plans(customers, letter, options):
         
         # Generate demo content for this customer
         classification_type = letter['classification'].get('classification', 'INFORMATION') if letter['classification'] else 'INFORMATION'
-        # Get the actual letter content for demo
-
-        letter_content = ""
-
-        if 'selected_letter' in st.session_state:
-
-            selected_letter = st.session_state.selected_letter
-
-            from file_handlers.letter_scanner import EnhancedLetterScanner
-
-            scanner = EnhancedLetterScanner()
-
-            letter_path = Path(selected_letter['filepath'])
-
-            letter_content = scanner.read_letter_content(letter_path)
-
-            if not letter_content:
-
-                letter_content = "Letter content could not be read."
-
-        
-
-        customer_plan = create_demo_content_for_customer(customer, classification_type, letter_content, cost_manager, options)
+        customer_plan = create_demo_content_for_customer(customer, classification_type, cost_manager, options)
         all_customer_plans.append(customer_plan)
         
         time.sleep(0.1)  # Small delay for visual effect
@@ -324,7 +280,7 @@ def show_generation_success():
                 del st.session_state.all_customer_plans
             st.rerun() 
 
-def create_demo_content_for_customer(customer: Dict, classification_type: str, letter_content: str, cost_manager, options: Dict) -> Dict:
+def create_demo_content_for_customer(customer: Dict, classification_type: str, cost_manager, options: Dict) -> Dict:
     """Create demo content for a single customer using templates."""
     
     name = customer.get('name', 'Customer')
@@ -512,7 +468,7 @@ def calculate_channel_costs(channels: List[str], cost_manager) -> Dict:
 # Find the function create_real_ai_content_for_customer (around line 450)
 # and REPLACE THE ENTIRE FUNCTION with this fixed version:
 
-def create_real_ai_content_for_customer(customer: Dict, classification_type: str, letter_content: str, cost_manager, api_manager, options: Dict) -> Dict:
+def create_real_ai_content_for_customer(customer: Dict, classification_type: str, cost_manager, api_manager, options: Dict) -> Dict:
     """Create real AI-generated content for a single customer."""
     
     name = customer.get('name', 'Customer')
@@ -554,39 +510,6 @@ def create_real_ai_content_for_customer(customer: Dict, classification_type: str
         {language_instruction}
         
         Create personalized banking communication content for this customer across multiple channels:
-        
-        
-        ORIGINAL LETTER TO REWRITE:
-        ========================================
-        {letter_content}
-        ========================================
-        
-        CRITICAL INSTRUCTIONS - YOU MUST FOLLOW THESE EXACTLY:
-        
-        1. EXTRACT these key points from the letter above:
-           - Main topic/purpose
-           - ALL specific features or services mentioned
-           - ANY actions requested from the customer
-           - ANY links or contact information
-        
-        2. Your rewrite MUST include:
-           - EVERY feature/service from the original letter
-           - The SAME core message and purpose
-           - ALL contact info and links from original
-           - Just adapt the TONE and LANGUAGE for the customer
-        
-        3. DO NOT:
-           - Replace content with generic support messages
-           - Skip any features mentioned in the original
-           - Change what the letter is about
-           - Add unrelated content
-        
-        4. EXAMPLE:
-           If original says "Set spending limits, get alerts, track savings"
-           You MUST mention ALL THREE in your rewrite
-           NOT just say "we offer helpful tools"
-        
-        TASK: Rewrite preserving ALL information, just personalize the delivery.
         
         CUSTOMER PROFILE:
         - Name: {name}
