@@ -57,19 +57,6 @@ def render_customer_communication_plans_page():
 def check_communication_prerequisites():
     """Check if required data is available for communication planning."""
     
-    # AUTO-LOAD TEST DATA if no analysis results
-    if 'analysis_results' not in st.session_state:
-        try:
-            import json
-            from pathlib import Path
-            test_file = Path("data/test_data/test_customers_analyzed.json")
-            if test_file.exists():
-                with open(test_file, 'r') as f:
-                    st.session_state.analysis_results = json.load(f)
-                st.info("📊 Test dataset auto-loaded (3 customers)")
-        except:
-            pass
-    
     # Check for customer analysis results
     customer_data_available = 'analysis_results' in st.session_state and st.session_state.analysis_results is not None
     
@@ -94,15 +81,70 @@ def check_communication_prerequisites():
         
         with col1:
             if not customer_data_available:
-                st.error("❌ **Customer Analysis Required**\n\nGo to 'Customer Analysis' and analyze your customer data first.")
+                st.error("❌ Customer Analysis Required")
+                st.markdown("Go to 'Customer Analysis' and analyze your customer data first.")
+                
+                # Add option to load test data
+                st.markdown("---")
+                st.markdown("**🧪 Or use test data for quick testing:**")
+                
+                if st.button("📊 Load 3 Test Customers", type="primary", use_container_width=True):
+                    try:
+                        import json
+                        from pathlib import Path
+                        test_file = Path("data/test_data/test_customers_analyzed.json")
+                        if test_file.exists():
+                            with open(test_file, 'r') as f:
+                                st.session_state.analysis_results = json.load(f)
+                            st.success("✅ Test dataset loaded successfully!")
+                            st.balloons()
+                            st.rerun()
+                        else:
+                            st.error("Test dataset file not found. Run create_test_dataset.py first.")
+                    except Exception as e:
+                        st.error(f"Error loading test data: {e}")
+                
+                st.info("Test customers: Maria (Spanish), Vera (Vulnerable), Dave (Premium)")
+                
             else:
-                st.success("✅ **Customer Data Ready**\n\nCustomer analysis completed and available.")
+                st.success("✅ Customer Data Ready")
+                st.markdown("Customer analysis completed and available.")
+                
+                # Show option to switch to test data if wanted
+                with st.expander("🧪 Switch to test data"):
+                    if st.button("Load Test Dataset Instead", use_container_width=True):
+                        try:
+                            import json
+                            from pathlib import Path
+                            test_file = Path("data/test_data/test_customers_analyzed.json")
+                            if test_file.exists():
+                                with open(test_file, 'r') as f:
+                                    st.session_state.analysis_results = json.load(f)
+                                st.success("✅ Switched to test dataset!")
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Error: {e}")
         
         with col2:
             if not letters_available:
-                st.error("❌ **Letters Required**\n\nGo to 'Letter Management' and upload/create letters first.")
+                st.error("❌ Letters Required")
+                st.markdown("Go to 'Letter Management' and upload/create letters first.")
             else:
-                st.success(f"✅ **Letters Available**\n\n{len(letters)} letters ready for processing.")
+                st.success("✅ Letters Available")
+                st.markdown(f"{len(letters)} letters ready for processing.")
+        
+        # Show currently loaded data info
+        if customer_data_available:
+            st.markdown("---")
+            st.markdown("**📊 Current Data:**")
+            if 'analysis_results' in st.session_state:
+                customers = st.session_state.analysis_results.get('customer_categories', [])
+                if len(customers) == 3:
+                    # Likely test data
+                    customer_names = [c.get('name', 'Unknown') for c in customers[:3]]
+                    st.info(f"Test Data: {', '.join(customer_names)}")
+                else:
+                    st.info(f"Production Data: {len(customers)} customers")
         
         return False
     
