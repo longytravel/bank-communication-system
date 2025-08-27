@@ -142,12 +142,12 @@ def render_individual_customer_details(all_plans: List[Dict]):
         for idx, tab in enumerate(customer_tabs):
             with tab:
                 plan = all_plans[idx]
-                render_single_customer_detail(plan)
+                render_single_customer_detail(plan, idx)  # FIX: Changed selected_index to idx
     
     if len(all_plans) > 10:
         st.info(f"Showing first 10 customers. Total: {len(all_plans)} customers.")
 
-def render_single_customer_detail(plan: Dict):
+def render_single_customer_detail(plan: Dict, index: int = 0):
     """Render details for a single customer."""
     
     # Customer header
@@ -179,7 +179,7 @@ def render_single_customer_detail(plan: Dict):
     st.markdown("#### Communication Content")
     
     # Display all channels using the channel display component
-    render_all_channels(plan, 0)
+    render_all_channels(plan, index)  # FIX: Changed customer_index to index
 
 def render_export_section(all_plans: List[Dict]):
     """Render export options for the results."""
