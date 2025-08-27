@@ -1,6 +1,7 @@
 """
-API Manager
-Coordinates all API interactions and provides a unified interface.
+API Manager - FIXED VERSION
+Coordinates all API interactions with proper language preservation.
+No hardcoding - pure AI-driven multilingual support.
 """
 
 import logging
@@ -40,13 +41,16 @@ class APIManager:
                             batch_size: int = 8) -> Optional[Dict[str, Any]]:
         """
         Analyze entire customer base for segmentation and insights.
+        FIXED: Properly preserves all original customer data including language.
         """
         self.logger.info(f"Starting customer base analysis for {len(customers)} customers")
         
-        # DEBUG: Check if preferred_language is in original data
+        # Log language preferences in original data
+        language_summary = {}
         for customer in customers:
-            if customer.get('name') == 'Maria Garcia':
-                print(f"DEBUG Step 1: Maria's original data has language: {customer.get('preferred_language', 'NOT FOUND')}")
+            lang = customer.get('preferred_language', 'Not Set')
+            language_summary[lang] = language_summary.get(lang, 0) + 1
+        self.logger.info(f"Customer languages in input: {language_summary}")
         
         # Get customer categories from Claude
         customer_categories = self.claude.analyze_customer_batch(customers, batch_size)
@@ -55,32 +59,44 @@ class APIManager:
             self.logger.error("Failed to get customer categories from Claude")
             return None
         
-        # CRITICAL FIX: Merge original customer data with Claude's analysis
-        # This ensures we keep account_balance, age, digital_logins_per_month, preferred_language, etc.
+        # CRITICAL FIX: Properly merge original data with Claude's analysis
+        # This ensures ALL original fields are preserved, especially preferred_language
         for i, analyzed_customer in enumerate(customer_categories):
             if i < len(customers):
                 original_customer = customers[i]
                 
-                # DEBUG: Check Maria before merge
-                if original_customer.get('name') == 'Maria Garcia':
-                    print(f"DEBUG Step 2: Before merge - Maria's analyzed data has language: {analyzed_customer.get('preferred_language', 'NOT FOUND')}")
-                    print(f"DEBUG Step 2: Original Maria has language: {original_customer.get('preferred_language', 'NOT FOUND')}")
+                # Log language preservation for key customers
+                if 'Nowak' in original_customer.get('name', '') or 'Kowalski' in original_customer.get('name', ''):
+                    self.logger.info(f"Polish customer {original_customer.get('name')}: "
+                                   f"Original language = {original_customer.get('preferred_language')}")
                 
-                # FORCE preserve critical fields that might get lost
-                critical_fields = ['preferred_language', 'account_balance', 'age', 'digital_logins_per_month', 'email', 'phone']
+                # COMPREHENSIVE MERGE: Original data takes precedence for factual fields
+                # Claude's analysis adds categorization and insights
                 
-                # First, merge all original data with Claude's analysis
+                # Fields where original data MUST take precedence (factual data)
+                factual_fields = [
+                    'customer_id', 'name', 'age', 'account_balance',
+                    'preferred_language', 'email', 'phone',
+                    'digital_logins_per_month', 'mobile_app_usage',
+                    'email_opens_per_month', 'phone_calls_per_month',
+                    'branch_visits_per_month', 'employment_status',
+                    'income_level'
+                ]
+                
+                # Preserve all factual fields from original
+                for field in factual_fields:
+                    if field in original_customer:
+                        analyzed_customer[field] = original_customer[field]
+                
+                # Add any other original fields that Claude might have missed
                 for key, value in original_customer.items():
-                    # Always override with original for critical fields
-                    if key in critical_fields:
-                        analyzed_customer[key] = value  # Force override for critical fields
-                    elif key not in analyzed_customer:
-                        analyzed_customer[key] = value  # Add missing fields
+                    if key not in analyzed_customer:
+                        analyzed_customer[key] = value
                 
-                # DEBUG: Check Maria after merge
-                if analyzed_customer.get('name') == 'Maria Garcia':
-                    print(f"DEBUG Step 3: After merge - Maria's data has language: {analyzed_customer.get('preferred_language', 'NOT FOUND')}")
-                    print(f"DEBUG Step 3: Maria's full keys: {list(analyzed_customer.keys())}")
+                # Final verification log
+                if 'Nowak' in analyzed_customer.get('name', '') or 'Kowalski' in analyzed_customer.get('name', ''):
+                    self.logger.info(f"After merge: {analyzed_customer.get('name')} "
+                                   f"has language = {analyzed_customer.get('preferred_language')}")
         
         # Build aggregated insights
         aggregates = self._build_aggregates(customer_categories)
@@ -93,7 +109,8 @@ class APIManager:
             "analysis_metadata": {
                 "total_analyzed": len(customer_categories),
                 "batch_size_used": batch_size,
-                "api_model": self.claude.model
+                "api_model": self.claude.model,
+                "languages_present": language_summary
             }
         }
         
@@ -104,10 +121,11 @@ class APIManager:
                                      channels: List[str], generate_voice: bool = True) -> Optional[Dict[str, Any]]:
         """
         Process a complete customer communication strategy.
+        FIXED: Ensures language preference is properly passed through.
         
         Args:
             letter_text: Original letter content
-            customer_profile: Full customer profile
+            customer_profile: Full customer profile INCLUDING preferred_language
             channels: Available communication channels
             generate_voice: Whether to generate voice notes
             
@@ -115,14 +133,29 @@ class APIManager:
             Complete communication strategy with all assets
         """
         customer_id = customer_profile.get('customer_id', 'unknown')
-        self.logger.info(f"Processing communication for customer {customer_id}")
+        customer_language = customer_profile.get('preferred_language', 'English')
         
-        # Get communication strategy from Claude
+        self.logger.info(f"Processing communication for customer {customer_id} in {customer_language}")
+        
+        # CRITICAL: Ensure preferred_language is in the profile
+        if 'preferred_language' not in customer_profile:
+            self.logger.warning(f"No preferred_language for {customer_id}, defaulting to English")
+            customer_profile['preferred_language'] = 'English'
+        
+        # Log the complete profile being sent to Claude
+        if customer_language != 'English':
+            self.logger.info(f"Sending to Claude: Customer {customer_profile.get('name')} "
+                           f"with language={customer_language}")
+        
+        # Get communication strategy from Claude - it will use the language from profile
         strategy = self.claude.process_customer_letter(letter_text, customer_profile, channels)
         
         if not strategy:
             self.logger.error(f"Failed to get communication strategy for customer {customer_id}")
             return None
+        
+        # Ensure language is preserved in strategy
+        strategy['customer_language'] = customer_language
         
         # Generate voice note if requested and customer is digital-first
         voice_note_path = None
@@ -141,21 +174,28 @@ class APIManager:
                         "step": len(timeline) + 1,
                         "channel": "voice_note",
                         "when": "immediate",
-                        "purpose": "Audio version for convenient listening",
+                        "purpose": f"Audio version in {customer_language}",
                         "file_path": str(voice_note_path)
                     })
                     strategy.setdefault("comms_plan", {})["timeline"] = timeline
         
+        # Generate video message if eligible
+        if self.video and customer_profile.get('account_balance', 0) >= 10000:
+            video_path = self._generate_video_for_customer(strategy, customer_id, customer_profile)
+            if video_path:
+                strategy['video_message_path'] = str(video_path)
+        
         # Add API metadata
         strategy["processing_metadata"] = {
             "customer_id": customer_id,
+            "customer_language": customer_language,
             "voice_note_generated": voice_note_path is not None,
             "voice_note_path": str(voice_note_path) if voice_note_path else None,
             "claude_model": self.claude.model,
             "channels_requested": channels
         }
         
-        self.logger.info(f"Communication processing completed for customer {customer_id}")
+        self.logger.info(f"Communication processing completed for customer {customer_id} in {customer_language}")
         return strategy
     
     def classify_letter(self, letter_text: str) -> Optional[Dict[str, Any]]:
@@ -186,7 +226,7 @@ class APIManager:
             customer_id = request.get('customer_id')
             text = request.get('text', '')
             message_type = request.get('message_type', 'notification')
-            customer_language = request.get('customer_language', None)
+            customer_language = request.get('customer_language', request.get('preferred_language', None))
             
             file_path = self.openai.generate_voice_note(
                 text, 
@@ -201,10 +241,14 @@ class APIManager:
     def generate_video_message(self, text: str, customer_id: str, 
                               message_type: str = "notification",
                               customer_data: Dict = None) -> Optional[Path]:
-        """Generate video message (similar to voice note)."""
+        """Generate video message with proper language support."""
         if not self.video:
             self.logger.warning("Video API not initialized")
             return None
+        
+        # Ensure language is passed to video generation
+        if customer_data and 'preferred_language' not in customer_data:
+            self.logger.warning(f"No language specified for video generation for {customer_id}")
         
         return self.video.generate_video_message(
             text, 
@@ -217,31 +261,43 @@ class APIManager:
                                          customer_profile: Dict[str, Any] = None) -> Optional[Path]:
         """Generate voice note for a single customer's communication strategy."""
         
-        # Get customer language from profile or strategy
-        customer_language = None
-        if customer_profile:
-            customer_language = customer_profile.get('preferred_language')
+        # Get customer language - check multiple sources
+        customer_language = (
+            customer_profile.get('preferred_language') or
+            strategy.get('customer_language') or
+            strategy.get('preferred_language') or
+            'English'
+        )
         
-        if not customer_language:
-            # Try to get from strategy
-            customer_language = strategy.get("preferred_language")
-        
-        self.logger.info(f"Generating voice note for customer {customer_id}, language: {customer_language}")
+        self.logger.info(f"Generating voice note for customer {customer_id} in {customer_language}")
         
         # Get text for voice note from strategy
         voice_text = None
         
-        # Try voice_note_text from assets first
-        assets = strategy.get("assets", {})
-        voice_text = assets.get("voice_note_text")
+        # Try different sources for voice text
+        personalized_content = strategy.get("personalized_content", {})
         
-        # Fallback to in-app notification
-        if not voice_text:
-            voice_text = assets.get("in_app_notification")
+        # Try voice_note first
+        if "voice_note" in personalized_content:
+            voice_text = personalized_content["voice_note"].get("script")
         
-        # Fallback to SMS text
+        # Try push notification
+        if not voice_text and "push_notification" in personalized_content:
+            push = personalized_content["push_notification"]
+            voice_text = push.get("message", push.get("text"))
+        
+        # Try SMS
+        if not voice_text and "sms" in personalized_content:
+            voice_text = personalized_content["sms"].get("message")
+        
+        # Legacy support for old format
         if not voice_text:
-            voice_text = assets.get("sms_text")
+            assets = strategy.get("assets", {})
+            voice_text = (
+                assets.get("voice_note_text") or
+                assets.get("in_app_notification") or
+                assets.get("sms_text")
+            )
         
         if not voice_text:
             self.logger.warning(f"No suitable text found for voice note generation (customer {customer_id})")
@@ -255,6 +311,40 @@ class APIManager:
             customer_language=customer_language
         )
     
+    def _generate_video_for_customer(self, strategy: Dict[str, Any], customer_id: str,
+                                    customer_profile: Dict[str, Any]) -> Optional[Path]:
+        """Generate video message for eligible customers."""
+        if not self.video:
+            return None
+        
+        # Get video script from strategy
+        personalized_content = strategy.get("personalized_content", {})
+        video_text = None
+        
+        # Try to get video-specific content
+        if "video_message" in personalized_content:
+            video_text = personalized_content["video_message"].get("script")
+        
+        # Fallback to email content
+        if not video_text and "email" in personalized_content:
+            # Use email subject + first paragraph
+            email = personalized_content["email"]
+            subject = email.get("subject", "")
+            body = email.get("body", "")
+            first_para = body.split('\n')[0] if body else ""
+            video_text = f"{subject}. {first_para}"[:500]  # Limit length
+        
+        if not video_text:
+            return None
+        
+        # Generate video with full customer data (includes language)
+        return self.video.generate_video_message(
+            video_text,
+            customer_id,
+            "personalized",
+            customer_data=customer_profile
+        )
+    
     def _build_aggregates(self, customer_categories: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Build aggregate statistics from customer categories."""
         total = len(customer_categories)
@@ -262,15 +352,21 @@ class APIManager:
         if total == 0:
             return {"total_customers": 0, "categories": {}, "insights": []}
         
-        # Count categories
+        # Count categories and languages
         category_counts = {}
+        language_counts = {}
         upsell_eligible = 0
         accessibility_count = 0
         vulnerable_count = 0
         
         for customer in customer_categories:
+            # Category counts
             category = customer.get("category", "Unknown")
             category_counts[category] = category_counts.get(category, 0) + 1
+            
+            # Language counts
+            language = customer.get("preferred_language", "Unknown")
+            language_counts[language] = language_counts.get(language, 0) + 1
             
             if customer.get("upsell_eligible"):
                 upsell_eligible += 1
@@ -292,6 +388,11 @@ class APIManager:
             f"Upsell eligibility at {pct(upsell_eligible)} suggests targeted but respectful approach",
         ]
         
+        # Add language diversity insight
+        if len(language_counts) > 1:
+            non_english = sum(count for lang, count in language_counts.items() if lang != 'English')
+            insights.append(f"{pct(non_english)} require non-English communication")
+        
         if accessibility_count > 0:
             insights.append(f"{pct(accessibility_count)} need alternate formats — ensure braille/audio availability")
         
@@ -301,6 +402,7 @@ class APIManager:
         return {
             "total_customers": total,
             "categories": category_counts,
+            "languages": language_counts,
             "upsell_eligible_count": upsell_eligible,
             "accessibility_needs_count": accessibility_count,
             "vulnerable_count": vulnerable_count,
@@ -316,7 +418,7 @@ class APIManager:
         segment_info = {
             "Digital-first self-serve": {
                 "description": "Comfortable with apps and email; quick to act on concise messages",
-                "opportunities": ["In-app nudges", "Voice notes", "Email/SMS reminders"]
+                "opportunities": ["In-app nudges", "Voice notes", "Email/SMS reminders", "Video messages for high-value"]
             },
             "Assisted-digital": {
                 "description": "Uses digital but benefits from guidance; appreciates blended support",
@@ -365,6 +467,7 @@ class APIManager:
                 "status": "connected",
                 "model": claude_info.get("model"),
                 "max_tokens": claude_info.get("max_tokens"),
+                "supported_languages": claude_info.get("supported_languages", []),
                 "error": None
             }
         except Exception as e:
@@ -380,7 +483,7 @@ class APIManager:
             status["openai"] = {
                 "status": "connected",
                 "tts_model": openai_info.get("tts_model"),
-                "default_voice": openai_info.get("default_voice"),
+                "supported_languages": openai_info.get("supported_languages", []),
                 "error": None
             }
         except Exception as e:
@@ -392,11 +495,20 @@ class APIManager:
         
         # Check Video (D-ID)
         if self.video:
-            status["video"] = {
-                "status": "connected",
-                "provider": "D-ID",
-                "error": None
-            }
+            try:
+                video_languages = self.video.get_supported_languages()
+                status["video"] = {
+                    "status": "connected",
+                    "provider": "D-ID",
+                    "supported_languages": [lang['name'] for lang in video_languages],
+                    "error": None
+                }
+            except Exception as e:
+                status["video"] = {
+                    "status": "error",
+                    "provider": "D-ID",
+                    "error": str(e)
+                }
         else:
             status["video"] = {
                 "status": "not initialized",
@@ -468,22 +580,28 @@ class APIManager:
     def get_usage_stats(self) -> Dict[str, Any]:
         """Get usage statistics for all APIs."""
         stats = {
-            "voice_notes": self.openai.get_voice_note_stats(),
+            "voice_notes": self.openai.get_voice_note_stats() if hasattr(self.openai, 'get_voice_note_stats') else {},
             "claude_model": self.claude.model,
             "openai_model": self.openai.tts_model
         }
         
         # Add video stats if available
-        if self.video:
+        if self.video and hasattr(self.video, 'get_video_stats'):
             stats["video_messages"] = self.video.get_video_stats()
         
         return stats
     
     def cleanup_resources(self, days_old: int = 30) -> Dict[str, int]:
-        """Clean up old resources (voice notes, etc.)."""
-        cleanup_results = {
-            "voice_notes_deleted": self.openai.cleanup_old_voice_notes(days_old)
-        }
+        """Clean up old resources (voice notes, videos, etc.)."""
+        cleanup_results = {}
+        
+        # Clean up voice notes
+        if hasattr(self.openai, 'cleanup_old_voice_notes'):
+            cleanup_results["voice_notes_deleted"] = self.openai.cleanup_old_voice_notes(days_old)
+        
+        # Clean up videos
+        if self.video and hasattr(self.video, 'cleanup_old_videos'):
+            cleanup_results["videos_deleted"] = self.video.cleanup_old_videos(days_old)
         
         self.logger.info(f"Resource cleanup completed: {cleanup_results}")
         return cleanup_results

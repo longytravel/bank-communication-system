@@ -129,6 +129,36 @@ class VideoAPI:
                     'senior': 'alex-KZmQ0KniB7E'
                 }
             },
+            'polish': {
+                'code': 'pl',
+                'provider': 'microsoft',
+                'voices': {
+                    'female': 'pl-PL-AgnieszkaNeural',
+                    'male': 'pl-PL-MarekNeural',
+                    'professional': 'pl-PL-ZofiaNeural'
+                },
+                'default_voice': 'pl-PL-ZofiaNeural',
+                'avatars': {
+                    'professional': 'amy-jcwCkr1grs',
+                    'friendly': 'josh-j2tVIcLCVPINZ',
+                    'senior': 'alex-KZmQ0KniB7E'
+                }
+            },
+            'urdu': {
+                'code': 'ur',
+                'provider': 'microsoft',
+                'voices': {
+                    'female': 'ur-PK-UzmaNeural',
+                    'male': 'ur-PK-AsadNeural',
+                    'professional': 'ur-PK-UzmaNeural'
+                },
+                'default_voice': 'ur-PK-UzmaNeural',
+                'avatars': {
+                    'professional': 'amy-jcwCkr1grs',
+                    'friendly': 'josh-j2tVIcLCVPINZ',
+                    'senior': 'alex-KZmQ0KniB7E'
+                }
+            },
             'mandarin': {
                 'code': 'zh',
                 'provider': 'microsoft',
@@ -216,7 +246,7 @@ class VideoAPI:
                 customer_language = customer_data.get('language', '').lower()
             
             if customer_language:
-                # Map common language codes/names to our keys
+                # Map common language codes/names to our keys                
                 language_mapping = {
                     'en': 'english', 'eng': 'english', 'english': 'english',
                     'es': 'spanish', 'esp': 'spanish', 'spanish': 'spanish', 'español': 'spanish',
@@ -224,6 +254,8 @@ class VideoAPI:
                     'de': 'german', 'ger': 'german', 'german': 'german', 'deutsch': 'german',
                     'it': 'italian', 'ita': 'italian', 'italian': 'italian', 'italiano': 'italian',
                     'pt': 'portuguese', 'por': 'portuguese', 'portuguese': 'portuguese', 'português': 'portuguese',
+                    'pl': 'polish', 'pol': 'polish', 'polish': 'polish', 'polski': 'polish',  # NEW
+                    'ur': 'urdu', 'urd': 'urdu', 'urdu': 'urdu', 'اردو': 'urdu',  # NEW
                     'zh': 'mandarin', 'chi': 'mandarin', 'chinese': 'mandarin', 'mandarin': 'mandarin', '中文': 'mandarin',
                     'ar': 'arabic', 'ara': 'arabic', 'arabic': 'arabic', 'عربي': 'arabic',
                     'hi': 'hindi', 'hin': 'hindi', 'hindi': 'hindi', 'हिंदी': 'hindi',
@@ -240,6 +272,17 @@ class VideoAPI:
         
         # Language detection patterns
         language_patterns = {
+            'polish': {
+                'keywords': ['dzień dobry', 'dziękuję', 'pan', 'pani', 'konto', 'bank', 
+                        'proszę', 'jest', 'mieć', 'pieniądze', 'karta', 'kredyt'],
+                'patterns': [r'\b(ą|ć|ę|ł|ń|ó|ś|ź|ż)\b', r'\b(się|jest|będzie)\b']
+            },
+            'urdu': {
+                'keywords': ['شکریہ', 'جناب', 'محترمہ', 'کھاتہ', 'بینک', 
+                        'آپ', 'ہے', 'پیسے', 'کارڈ'],
+                'patterns': [r'[\u0600-\u06ff\u0750-\u077f]']  # Arabic/Urdu script
+            },
+      
             'spanish': {
                 'keywords': ['hola', 'gracias', 'señor', 'señora', 'cuenta', 'banco', 'usted', 
                            'está', 'día', 'por favor', 'dinero', 'tarjeta', 'préstamo'],
