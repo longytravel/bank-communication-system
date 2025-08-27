@@ -1,0 +1,5 @@
+# Create .streamlit folder if it doesn't exist
+New-Item -ItemType Directory -Path ".\.streamlit" -Force
+
+# Save the theme config (copy the TOML content from above)
+Set-Content -Path ".\.streamlit\config.toml" -Value (Get-Clipboard)

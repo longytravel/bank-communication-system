@@ -1,0 +1,39 @@
+﻿{
+  "brand": {
+    "name": "Lloyds Banking Group",
+    "version": "1.0.0"
+  },
+  "colors": {
+    "primary": {
+      "lloyds_green": "#006A4D",
+      "lloyds_green_dark": "#00523B",
+      "lloyds_green_light": "#4D9B84"
+    },
+    "secondary": {
+      "heritage_green": "#024731",
+      "bright_green": "#00B67A",
+      "mint_green": "#E8F4F0"
+    },
+    "neutral": {
+      "black": "#000000",
+      "charcoal": "#2D2D2D",
+      "grey_dark": "#666666",
+      "grey_medium": "#999999",
+      "grey_light": "#CCCCCC",
+      "grey_pale": "#F5F5F5",
+      "white": "#FFFFFF"
+    }
+  },
+  "typography": {
+    "fontFamilies": {
+      "primary": "Arial, Helvetica, sans-serif"
+    }
+  },
+  "spacing": {
+    "xs": "4px",
+    "sm": "8px",
+    "md": "16px",
+    "lg": "24px",
+    "xl": "32px"
+  }
+}
